@@ -158,7 +158,7 @@ modes déplacement.<o:p></o:p></span></p>
 white'><span style='font-size:12.0pt;font-family:"Segoe UI",sans-serif;
 mso-fareast-font-family:"Times New Roman";color:#1F2328;mso-ansi-language:FR;
 mso-fareast-language:FR'>Cette étude fait partie d'une thèse de doctorat
-développée par&nbsp;</span><span lang=EN-GB style='font-size:12.0pt;font-family:
+menée par&nbsp;</span><span lang=EN-GB style='font-size:12.0pt;font-family:
 "Segoe UI",sans-serif;mso-fareast-font-family:"Times New Roman";color:#1F2328;
 mso-ansi-language:EN-GB;mso-fareast-language:FR'><a
 href="https://perso.univ-rennes2.fr/maelle.lucas"><span lang=FR
