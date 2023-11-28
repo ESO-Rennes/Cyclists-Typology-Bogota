@@ -87,7 +87,7 @@ mso-fareast-font-family:"Times New Roman";color:#1F2328;mso-ansi-language:EN-GB;
 mso-fareast-language:FR'>--&gt; Access to the&nbsp;</span><span
 style='font-size:12.0pt;font-family:"Segoe UI",sans-serif;mso-fareast-font-family:
 "Times New Roman";color:#1F2328;mso-ansi-language:FR;mso-fareast-language:FR'><a
-href="https://github.com/ESO-Rennes/Cyclists-Typology-Bogota-/blob/main/ScriptTypoCyclistesAFDM_v7.Rmd"><b><span
+href="https://github.com/ESO-Rennes/Cyclists-Typology-Bogota/blob/main/ScriptTypoCyclistesAFDM_v7.Rmd"><b><span
 lang=EN-GB style='mso-ansi-language:EN-GB'>R markdown script</span></b></a></span><span
 lang=EN-GB style='font-size:12.0pt;font-family:"Segoe UI",sans-serif;
 mso-fareast-font-family:"Times New Roman";color:#1F2328;mso-ansi-language:EN-GB;
@@ -95,7 +95,7 @@ mso-fareast-language:FR'><br>
 --&gt; Access to the&nbsp;</span><span style='font-size:12.0pt;font-family:
 "Segoe UI",sans-serif;mso-fareast-font-family:"Times New Roman";color:#1F2328;
 mso-ansi-language:FR;mso-fareast-language:FR'><a
-href="https://htmlpreview.github.io/?https://github.com/ESO-Rennes/Cyclists-Typology-Bogota-/blob/main/ScriptTypoCyclistesAFDM_v7.html"><b><span
+href="https://htmlpreview.github.io/?https://github.com/ESO-Rennes/Cyclists-Typology-Bogota/blob/main/ScriptTypoCyclistesAFDM_v7.html"><b><span
 lang=EN-GB style='mso-ansi-language:EN-GB'>HTML laid-out output</span></b></a></span><span
 lang=EN-GB style='font-size:12.0pt;font-family:"Segoe UI",sans-serif;
 mso-fareast-font-family:"Times New Roman";color:#1F2328;mso-ansi-language:EN-GB;
@@ -103,7 +103,7 @@ mso-fareast-language:FR'><br>
 --&gt; Access to the&nbsp;</span><span class=SpellE><span style='font-size:
 12.0pt;font-family:"Segoe UI",sans-serif;mso-fareast-font-family:"Times New Roman";
 color:#1F2328;mso-ansi-language:FR;mso-fareast-language:FR'><a
-href="https://github.com/ESO-Rennes/Cyclists-Typology-Bogota-/raw/main/data.zip"><b><span
+href="https://github.com/ESO-Rennes/Cyclists-Typology-Bogota/raw/main/data.zip"><b><span
 lang=EN-GB style='mso-ansi-language:EN-GB'>the</span></b><b><span lang=EN-GB
 style='mso-ansi-language:EN-GB'> data processed in the script</span></b></a></span></span><span
 lang=EN-GB style='font-size:12.0pt;font-family:"Segoe UI",sans-serif;
@@ -189,13 +189,13 @@ style='font-size:12.0pt;font-family:"Segoe UI",sans-serif;mso-fareast-font-famil
 background:white'><span style='font-size:12.0pt;font-family:"Segoe UI",sans-serif;
 mso-fareast-font-family:"Times New Roman";color:#1F2328;mso-ansi-language:FR;
 mso-fareast-language:FR'>--&gt; Accès au&nbsp;<a
-href="https://github.com/ESO-Rennes/Cyclists-Typology-Bogota-/blob/main/ScriptTypoCyclistesAFDM_v7.Rmd"><b>script
+href="https://github.com/ESO-Rennes/Cyclists-Typology-Bogota/blob/main/ScriptTypoCyclistesAFDM_v7.Rmd"><b>script
 R <span class=SpellE>markdown</span></b></a><br>
 --&gt; Accès à&nbsp;<a
-href="https://htmlpreview.github.io/?https://github.com/ESO-Rennes/Cyclists-Typology-Bogota-/blob/main/ScriptTypoCyclistesAFDM_v7.html"><b>la
+href="https://htmlpreview.github.io/?https://github.com/ESO-Rennes/Cyclists-Typology-Bogota/blob/main/ScriptTypoCyclistesAFDM_v7.html"><b>la
 sortie HTML</b></a><br>
 --&gt; Accès aux&nbsp;<a
-href="https://github.com/ESO-Rennes/Cyclists-Typology-Bogota-/raw/main/data.zip"><b>données
+href="https://github.com/ESO-Rennes/Cyclists-Typology-Bogota/raw/main/data.zip"><b>données
 traitées dans le script</b></a><o:p></o:p></span></p>
 
 <p class=MsoNormal><span style='mso-ansi-language:FR'><o:p>&nbsp;</o:p></span></p>
