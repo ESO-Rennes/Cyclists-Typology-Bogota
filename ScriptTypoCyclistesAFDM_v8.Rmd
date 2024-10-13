@@ -1,0 +1,776 @@
+---
+title: Calcul des profils de cyclistes et cartographie de leur localisation dans la
+  ville
+author: "[Maëlle Lucas](https://perso.univ-rennes2.fr/maelle.lucas) et [Florent Demoraes](https://perso.univ-rennes2.fr/florent.demoraes)"
+date: "18/11/2022 - Mise à jour 12/10/2024"
+output:
+  word_document:
+    toc: true
+    number_sections: true
+    toc_depth: 4
+  pdf_document:
+    toc: true
+    toc_depth: '4'
+  html_document:
+    toc: true
+    number_sections: true
+    toc_depth: 4
+    css: styles.css
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(out.width = "100%")
+```
+
+# Calcul des profils de cyclistes à l'aide d'une AFDM couplée à une CAH
+## Chargement des packages nécessaires
+```{r loading package, warning=FALSE, message = FALSE, error=FALSE}
+library(openxlsx) # Pour importer/exporter depuis/vers Excel
+library(FactoMineR)# Pour executer des analyses factorielles (telle que l'AFDM) et des classifications (type CAH)
+library(factoextra) # pour améliorer le rendu des graphiques produits par FactoMineR
+library(dplyr) # pour faciliter la manipulation de données
+library(tidyr) # pour passer du format long en format wide
+library(fmsb) # pour produire des graphiques en radar
+library(ggplot2) # pour produire des graphiques élaborés
+library(sf) # pour manipuler les objets ayant une composante spatiale
+library(spatstat) # pour le lissage spatial
+library(terra) # pour le traitement de données matricielles (raster)
+library(mapsf) # pour la représentation cartographique et l'habillage des cartes
+```
+
+## Importation des données en entrée (fichier Excel)
+```{r Import donnees}
+# import du tableau des individus ayant utilisé la veille de l'enquête, le vélo comme mode principal pour se déplacer dans la ville
+Cyclistes <- read.xlsx("Cyclistes.xlsx", sheet = "VariablesCyclistes")
+rownames(Cyclistes) <- Cyclistes$id_hog_pers # pour ajouter l'id des personnes comme entête de ligne
+Cyclistes$id_hog_pers <- NULL # pour supprimer la colonne
+head(Cyclistes)
+str(Cyclistes)
+summary(Cyclistes)
+```
+
+## Calcul d'une première AFDM (Analyse Factorielle des Données Mixtes) avec toutes les variables pour déterminer des profils de cyclistes
+```{r premiere AFDM, warning=FALSE, message = FALSE, error=FALSE, fig.height=15, fig.width=15}
+res <- FAMD(Cyclistes, graph = FALSE)
+
+contrib <- transform(data.frame(res$ind$contrib), contribPlan1 = Dim.1 + Dim.2)
+selected_individuals <- rownames(contrib)[contrib$contribPlan1 >= quantile(contrib$contribPlan1, 0.99)] # création d'une liste d'individus dont les étiquettes seront affichées sur les graphiques (on n'en sélectionne que 1% ici pour ne pas allonger l'affichage des graphiques)
+rm(contrib)
+
+plot.FAMD(res, title = "Graphique des individus de l'AFDM avec les modalités des variables catégorielles", cex = 0.9, cex.main = 1, graph.type = "ggplot", cex.axis = 0.75, label = c('ind','quali.var'), select = selected_individuals)
+
+plot.FAMD(res, title = "Graphique des modalités des variables catégorielles", cex = 0.9, cex.main = 1, graph.type = "ggplot", cex.axis = 0.75, invisible = "ind")
+
+plot.FAMD(res, choix = "var", title = "Graphique des centres des variables quantitatives et catégorielles", cex = 0.9, cex.main = 1, graph.type = "ggplot", cex.axis = 0.75, xlim = c(0, 0.8), ylim = c(0, 0.55))
+
+plot.FAMD(res, choix = "quanti", title = "Graphique des corrélations des variables quantitatives", cex = 0.9, cex.main = 1, graph.type = "ggplot", cex.axis = 0.75)
+```
+
+## Ajustement de la première AFDM pour augmenter l'inertie sur le premier plan
+
+### Suppression des variables qui sont proches de l'origine du plan factoriel (peu discriminantes)
+```{r suppression variables proche origine}
+Cyclistes$Experi <- NULL
+Cyclistes$NumMoto <- NULL
+Cyclistes$NumViajDia <- NULL
+Cyclistes$PartModInd <- NULL
+```
+
+### Affichage de la liste des variables restantes
+```{r affichage liste variables}
+print(as.data.frame(colnames(Cyclistes)))
+```
+
+### Suppresion des individus qui ont des durées moyennes de trajet anormalement longues
+```{r filtrage donnees, warning=FALSE, message = FALSE, error=FALSE}
+Cyclistes <- Cyclistes[Cyclistes$Duracion < 300,]
+```
+
+## Deuxième calcul de l'AFDM après suppression des variables peu discriminantes et le passage de certaines variables en illustratif
+```{r deuxieme AFDM, warning=FALSE, message = FALSE, error=FALSE, fig.height=15, fig.width=15}
+res <- FAMD(Cyclistes, sup.var = c(2,6,9,10,11,15,17), graph = FALSE)
+
+contrib <- transform(data.frame(res$ind$contrib), contribPlan1 = Dim.1 + Dim.2)
+selected_individuals <- rownames(contrib)[contrib$contribPlan1 >= quantile(contrib$contribPlan1, 0.95)] # création d'une liste d'individus dont les étiquettes seront affichées sur les graphiques (on n'en sélectionne que 5% ici pour ne pas allonger l'affichage des graphiques)
+rm(contrib)
+
+plot.FAMD(res, title = "Graphique des individus de l'AFDM avec les modalités des variables catégorielles", cex = 0.6, cex.main = 1, graph.type = "ggplot", cex.axis = 0.75, label = c('ind','quali.var'), select = selected_individuals)
+
+plot.FAMD(res, title = "Graphique des modalités des variables catégorielles", cex = 0.7, cex.main = 1, graph.type = "ggplot", cex.axis = 0.75, invisible = "ind")
+
+plot.FAMD(res, choix = "var", title = "Graphique des centres des variables quantitatives et catégorielles", cex = 0.7, cex.main = 1, graph.type = "ggplot", cex.axis = 0.75, xlim = c(0, 0.55), ylim = c(0, 0.45))
+
+plot.FAMD(res, choix = "quanti", title = "Graphique des corrélations des variables quantitatives", cex = 0.9, cex.main = 1, graph.type = "ggplot", cex.axis = 0.75)
+
+```
+
+## Lancement de la CAH sur les résultats de l'AFDM
+```{r lancement CAH, warning=FALSE, message = FALSE, error=FALSE, fig.height=15, fig.width=15}
+nbclasses <- 6 # tester avec différents nombres de classes
+res.hcpc <- HCPC(res, kk = Inf, nb.clust = nbclasses, consol = FALSE, graph = FALSE) # kk = Inf signifie pas de partition préalable, consol = FALSE signifie qu'on n'applique pas à l'issue de la CAH une consolidation (par les k-means)
+plot(res.hcpc, choice = "tree")
+fviz_cluster(res.hcpc,
+  repel = TRUE,            # Avoid label overlapping
+  show.clust.cent = TRUE,  # Show cluster centers
+  palette = "jco",         # Color palette see ?ggpubr::ggpar
+  ggtheme = theme_minimal(),
+  main = "Factor map",
+  geom = "point",         # Use points instead of labels
+  geom_param = list(size = 1)  # Set the size of the points as desired
+)
+```
+
+## Calcul du tableau avec les effectifs par classe et du diagramme en barres associé
+```{r calcul tableau effectifs}
+dataclust <- as.data.frame(res.hcpc[["data.clust"]])
+IndividusClasse <- aggregate(NivEducCL ~ clust, dataclust, length) # pour créer un tableau avec le nombre d'individus par classe
+print(IndividusClasse)
+barplot(IndividusClasse$NivEducCL, names = IndividusClasse$clust, main = "Distribution des individus par profil")
+```
+
+## Production de graphiques permettant de décrire les classes
+
+### Identifier les variables catégorielles qui ne prennent que deux modalités
+```{r gestion des variables categorielles avec deux modalites}
+# Cette opération est nécessaire pour simplifier ensuite les graphiques
+TableauVariablesCategorielles <- Filter(is.character, Cyclistes)
+
+NbModalitesParVariable <- data.frame()
+
+for (i in colnames(TableauVariablesCategorielles)){
+
+  # Récuperation du nombre de modalités pour chaque variable catégorielle
+  fichier <- length(unique(TableauVariablesCategorielles[[i]]))
+  NbModalitesParVariable <- rbind(NbModalitesParVariable, fichier)
+  
+}
+
+rm(i, fichier)
+
+NbModalitesParVariable$Variable <- colnames(TableauVariablesCategorielles)
+
+VariablesDeuxModalites <- NbModalitesParVariable[which(NbModalitesParVariable[,1] == 2),]
+VariablesDeuxModalites <- as.character(VariablesDeuxModalites$Variable)
+```
+
+### Déterminer le seuil de la valeur v.test à retenir pour garder les variables qui décriront les classes 
+```{r definition seuil significativite}
+# Par défaut v.test > |1.96| - Dans le cas présent relever le seuil permet de réduire le nombre de variables qui décriront les classes. On ne garde que celles qui sont extrêmement significatives
+Seuil.v.test <- 3.29 # on accepte de se tromper une fois sur 1000
+# en savoir plus https://www.medcalc.org/manual/values-of-the-normal-distribution.php
+```
+
+### Création de tableaux décrivant les profils par les variables quantitatives et qualitatives et affichage des diagrammes en barres
+```{r filtrage variables deux modalites, fig.height=10}
+# Pour les variables n'ayant que deux modalités, on n'en garde qu'une
+for (i in 1:nbclasses){
+
+  # Récuperation dans des tableaux de la description de chacune des N classes par les variables quanti
+  b <- as.data.frame(res.hcpc$desc.var$quanti[[i]])
+  b <- b[which(colnames(b) == 'v.test')]
+  b <- signif(b,3) # pour arrondir les valeurs
+
+  # Récuperation dans des tableaux de la description de chacune des N classes par les variables quali
+  c <- as.data.frame(res.hcpc$desc.var$category[[i]])
+  d <- as.data.frame(c$label <- rownames(c))
+  d <- as.data.frame(c$label <- sub("\\=.*", "", c$label))
+  d <- as.data.frame(c[which(c$label %in% VariablesDeuxModalites), ])
+  d <- as.data.frame(d[which(d$v.test > 0),])
+  e <- as.data.frame(c[which(!c$label %in% VariablesDeuxModalites), ])
+  f <- as.data.frame(rbind(d, e))
+  g <- as.data.frame(f$label <- NULL)
+  c <- signif(f,3) # pour arrondir les valeurs
+  c <- c[which(colnames(c) == 'v.test')]
+
+  # Assemblage des tableaux avec les variables quanti et quali
+  h <- as.data.frame(rbind(b,c))
+  h <- as.data.frame(cbind(h, h$label <- row.names(h)))
+  colnames(h) <- c("v.test", "label")
+  h <- as.data.frame(h[order(h$v.test, decreasing = TRUE), ])
+  h <- as.data.frame(h[which(!h$v.test == "Inf"),])
+  h <- as.data.frame(h[which(abs(h$v.test) >= Seuil.v.test),])
+
+  # pour tracer les diagrammes en barres horizontaux
+  op <- par(oma = c(0,7,0,0))
+  barplot((h$v.test), names = row.names(h), border = "white", horiz = TRUE, las = 1, xlim = c(-5 - max(abs(h$v.test)), 5 + max(abs(h$v.test))), cex.names=0.8, main = paste("profil", i, sep = ""))
+  par(op)
+  
+}
+rm(b,c,d,e,f,g,h,i)
+```
+
+### Création de graphiques en radar pour visualiser, pour chaque profil, sa composition sociodémographique et les motifs de déplacement 
+```{r Generating radar charts, message=FALSE, warning=FALSE}
+#to reduce margins and set a grey background
+opar <- par(mar = c(2, 2, 2, 2), bg = "grey60")
+
+# Color vector
+colors_border = c("blue", "green" , "red", "yellow", "black", "cyan")
+colors_in = c("blue", "green" , "red", "yellow", "black", "cyan")
+
+## VARIABLES INDIVIDUELLES (PREPARATION DES TABLEAUX)
+
+# GENRE ET PERMIS DE CONDUIRE
+genre_permis_radar <- dataclust %>%
+  group_by(clust) %>%
+  summarise(muj = sum(Sexo == "Mujer") / n() * 100,
+            permis_cond = sum(LicCondu == "LicCon-Si") / n() * 100)
+
+# AGE
+age_radar <- dataclust %>%
+  group_by(clust, Edad) %>%
+  summarise(effectifs = n()) %>%
+  group_by(clust) %>%
+  mutate(effectifs = effectifs / sum(effectifs) * 100) %>%
+  pivot_wider(names_from = Edad, values_from = effectifs)
+
+# remplace NA by 0
+age_radar <- replace(age_radar, is.na(age_radar), 0)
+
+# reorder columns
+age_radar <- age_radar[c(1,5,3,4,2)]
+
+# NIVEAU D'EDUCATION
+NivEduc_radar <- dataclust %>%
+  group_by(clust, NivEducCL) %>%
+  summarise(effectifs = n()) %>%
+  group_by(clust) %>%
+  mutate(effectifs = effectifs / sum(effectifs) * 100) %>%
+  pivot_wider(names_from = NivEducCL, values_from = effectifs)
+
+# remplace NA by 0
+NivEduc_radar <- replace(NivEduc_radar, is.na(NivEduc_radar), 0)
+
+# reorder columns
+NivEduc_radar <- NivEduc_radar[c(1,3,2,4,5)]
+
+# combine dataframes
+var_indiv_radar <- cbind(genre_permis_radar, age_radar[-1], NivEduc_radar[-1])
+
+# assign rownames
+rownames(var_indiv_radar) <- paste("profil" , var_indiv_radar$clust , sep = "-")
+var_indiv_radar$clust <- NULL
+
+# To move a column
+var_indiv_radar <- var_indiv_radar %>% relocate(permis_cond, .after = Universitario)
+
+summary(var_indiv_radar)
+
+# to add two rows at the top of the dataframe with the max and min for each variable (based on the previous summary)
+var_indiv_radar <- rbind(rep(100,10) , rep(0,10) , var_indiv_radar)
+
+# to reorder columns
+var_indiv_radar <- var_indiv_radar[, c(1, rev(seq_along(var_indiv_radar)[-1]))]
+
+# plot radar chart
+radarchart(var_indiv_radar, axistype = 1, seg = 5, pty = 32, centerzero = FALSE,
+           #custom polygon
+           pcol = colors_border, pfcol = adjustcolor(colors_in, alpha.f = 0), plwd = 2 , plty = 1,
+           #custom the grid
+           cglcol = "white", cglty = 3, axislabcol = "white", caxislabels = rep("", 10), cglwd = 0.1,
+           #custom labels
+           vlcex = 0.5, calcex = 0.5
+)
+
+# Add a legend
+legend(x = 1.2, y = 1.2, legend = rownames(var_indiv_radar[-c(1,2),]), bty = "n", pch = 18 , col = colors_border, text.col = "black", cex = 0.5, pt.cex = 0.9)
+
+# add a title
+title(main = "Caractéristiques des cyclistes par profil\n(synthèse)", cex.main = 0.8)
+
+# Split the screen in 6 parts to plot each radar separately
+opar <- par(oma = c(0,0,3,0)+0.1, mar = c(0, 0.5, 1.2, 0.5), mfrow = c(2,3), bg = "grey60")
+
+# Plot the radar charts
+for(i in 1:length(unique(dataclust$clust))){
+  radarchart(var_indiv_radar[c(1, 2, i+2), ], axistype = 1, seg = 5, pty = 32, centerzero = FALSE,
+             #custom polygon
+             pcol=colors_border[i], pfcol = adjustcolor(colors_in[i], alpha.f = 0), plwd = 2 , plty = 1,
+             #custom the grid
+             cglcol = "white", cglty = 3, axislabcol = "white", cglwd = 0.1, caxislabels = rep("", 10),
+             #custom labels
+             vlcex = 0.5, palcex = 0.8)
+  
+  # To add a title to each radar
+  title(main = paste("profil", i, sep = "-"), cex.main = 0.8)
+}
+
+# To insert a main title
+mtext("Caractéristiques des cyclistes par profil", 
+      cex = 1, side = 3,line = 1, adj = 0.5, outer = TRUE)
+
+# to reset graphic parameters
+par(opar)
+
+
+## VARIABLES CARCATERISANT LES TRAJETS ET LES PRATIQUES DE DEPLACEMENT A VELO (PREPARATION DES TABLEAUX)
+
+# TRAJETS
+trajet_radar <- dataclust %>%
+  group_by(clust) %>%
+  summarise(
+    travail = sum(MotivoCL == "Trab") / n() * 100,
+    ecole = sum(MotivoCL == "Estudio") / n() * 100,
+    loisir = sum(MotivoCL == "Ocio") / n() * 100,
+    autre = sum(MotivoCL == "Otro") / n() * 100,
+    durée = mean(Duracion),
+    distance = mean(Distancia),
+    FreqSemaine = mean(FrecSemana),
+    FreqWeekEnd = mean (FrecFinSem),
+    Occasionnel = sum(Ocasional == "Ocas-Si") / n() * 100
+  ) %>%
+  as.data.frame()
+
+rownames(trajet_radar) <- paste("profil" , trajet_radar$clust , sep = "-")
+trajet_radar$clust <- NULL
+
+summary(trajet_radar)
+
+# to add two rows at the top of the dataframe with the max and min for each variable (based on the previous summary)
+trajet_radar <- rbind(c(rep(100,4), 60, 20000, 5, 1, 100), rep(0, length(colnames(trajet_radar))), trajet_radar)
+
+# to reorder columns
+trajet_radar <- trajet_radar[, c(1, rev(seq_along(trajet_radar)[-1]))]
+
+# plot radar chart
+radarchart(trajet_radar, axistype = 1 , seg = 5, pty = 32, centerzero = FALSE,
+           #custom polygon
+           pcol = colors_border, pfcol = adjustcolor(colors_in, alpha.f = 0), plwd = 2 , plty = 1,
+           #custom the grid
+           cglcol = "white", cglty = 3, axislabcol = "white", cglwd = 0.1, caxislabels = rep("", 10),
+           #custom labels
+           vlcex = 0.5, calcex = 0.5
+)
+
+# Add a legend
+legend(x = 1.2, y = 1.2, legend = rownames(trajet_radar[-c(1,2),]), bty = "n", pch = 18 , col = colors_border, text.col = "black", cex = 0.5, pt.cex = 0.9)
+
+# add a title
+title(main = "Caractéristiques des déplacements par profil\n(synthèse)", cex.main = 0.8)
+
+# Split the screen in 6 parts to plot each radar separately
+opar <- par(oma = c(0,0,3,0)+0.1, mar = c(0, 0.5, 1.2, 0.5), mfrow = c(2,3), bg = "grey60")
+
+# Plot the radar charts
+for(i in 1:length(unique(dataclust$clust))){
+  radarchart(trajet_radar[c(1, 2, i+2), ], axistype = 1, seg = 5, pty = 32, centerzero = FALSE,
+             #custom polygon
+             pcol = colors_border[i], pfcol = adjustcolor(colors_in[i], alpha.f = 0), plwd = 2 , plty = 1,
+             #custom the grid
+             cglcol = "white", cglty = 3, axislabcol = "white", cglwd = 0.1, caxislabels = rep("", 10),
+             #custom labels
+             vlcex = 0.5, palcex = 0.8)
+  
+  # To add a title to each radar
+  title(main = paste("profil", i, sep = "-"), cex.main = 0.8)
+}
+
+# To insert a main title
+mtext("Caractéristiques des déplacements par profil", 
+      cex = 1, side = 3,line = 1, adj = 0.5, outer = TRUE)
+
+# to reset graphic parameters
+par(opar)
+```
+
+### Création de diagrammes en barres empilées verticaux pour visualiser, pour chaque profil, une première série de variables contextuelles (ménage et lieu de résidence)
+```{r Generating contextual stacked bar graphs, message=FALSE, warning=FALSE}
+
+## VARIABLES CARCATERISANT LES MENAGES (PREPARATION DES TABLEAUX)
+
+# STRATE CARACTERISANT LE STANDING DU LOGEMENT ET DU QUARTIER
+StratesLogt <- dataclust %>%
+  group_by(clust, Estrato) %>%
+  summarise(effectifs = n()) %>%
+  group_by(clust) %>%
+  mutate(effectifs = effectifs / sum(effectifs) * 100) %>%
+  pivot_wider(names_from = Estrato, values_from = effectifs)
+
+# remplace NA by 0
+StratesLogt <- replace(StratesLogt, is.na(StratesLogt), 0)
+
+# To move a column
+StratesLogt <- StratesLogt %>% relocate(Estr0, .before = Estr1)
+
+# To coerce df to long format
+StratesLogt_long <- StratesLogt %>%
+  pivot_longer(cols = -clust, names_to = "estrato", values_to = "pourcentage")
+
+# to plot the stacked bar graph
+ggplot(StratesLogt_long, aes(x = as.factor(clust), y = pourcentage, fill = factor(estrato, levels = rev(unique(estrato))))) +
+  geom_bar(position = "fill", stat = "identity") +
+  theme_bw() +
+  scale_fill_brewer(palette = "YlOrRd", direction = -1) +
+  labs(fill = "Strates des\nlogements\n(%)", y = "%", x = "profil")
+
+
+## VARIABLES CARCATERISANT LES LIEUX DE RESIDENCE (PREPARATION DES TABLEAUX)
+
+# GRANDES ZONES DE RESIDENCE
+GranZona <- dataclust %>%
+  group_by(clust, GranZona) %>%
+  summarise(effectifs = n()) %>%
+  group_by(clust) %>%
+  mutate(effectifs = effectifs / sum(effectifs) * 100) %>%
+  pivot_wider(names_from = GranZona, values_from = effectifs)
+
+# remplace NA by 0
+GranZona <- replace(GranZona, is.na(GranZona), 0)
+
+# To coerce df to long format
+GranZona_long <- GranZona %>%
+  pivot_longer(cols = -clust, names_to = "GranZona", values_to = "pourcentage")
+
+# to plot the stacked bar graph
+ggplot(GranZona_long, aes(x = as.factor(clust), y = pourcentage, fill = factor(GranZona, levels = rev(unique(GranZona))))) +
+  geom_bar(position = "fill", stat = "identity") +
+  theme_bw() +
+  scale_fill_brewer(palette = "Set3", direction = -1) +
+  labs(fill = "Lieux de résidence\npar grandes zones\n(%)", y = "%", x = "profil")
+```
+
+### Création de diagrammes en barres empilées horizontaux pour visualiser, pour chaque profil, d'autres variables contextuelles (ménage et lieu de résidence)
+```{r Generating contextual bar plots, message=FALSE, warning=FALSE}
+# to prepare the dataframe
+Contexte <- dataclust %>%
+  group_by(clust) %>%
+  summarise(num = n(),
+            Nb_moy_voit = mean(NumAuto),
+            Taille_menage = mean(NumPersHog),
+            Pct_ICS12 = mean(Pct_ICS12),
+            ParModUtam = mean(ParModUtam)
+            ) %>%
+  as.data.frame()
+
+# to create a bar plot 
+barplot(Contexte$Nb_moy_voit, 
+        names = Contexte$clust, 
+        border = "white", 
+        horiz = TRUE, 
+        las = 1, 
+        cex.names = 0.8, 
+        main = "Nombre moyen de voitures par ménage, par profil",
+        col = "purple")
+
+# to create a bar plot 
+barplot(Contexte$Taille_menage, 
+        names = Contexte$clust, 
+        border = "white", 
+        horiz = TRUE, 
+        las = 1, 
+        cex.names = 0.8, 
+        main = "Taille moyenne des ménages, par profil",
+        col = "blue")
+
+# to create a bar plot 
+barplot(Contexte$Pct_ICS12, 
+        names = Contexte$clust, 
+        border = "white", 
+        horiz = TRUE, 
+        las = 1, 
+        cex.names = 0.8, 
+        main = "Pourcentage de ménages ICS1 et ICS2\n dans les zones de résidence, par profil",
+        col = "green")
+
+# to create a bar plot 
+barplot(Contexte$ParModUtam, 
+        names = Contexte$clust, 
+        border = "white", 
+        horiz = TRUE, 
+        las = 1, 
+        cex.names = 0.8, 
+        main = "Part modale du vélo\n dans les zones de résidence, par profil",
+        col = "darkred")
+
+```
+
+## Préparation du tableau final contenant les résultats en vue d'un export vers Excel
+
+### Extraction de l'identifiant des ménages (id_hog) à partir la colonne id_hog_pers 
+```{r ajout colonne id des menages dans tableau initial}
+# utile par la suite pour récupérer les coord. XY du lieu de résidence du ménage
+Cyclistes$id_hog_pers <- row.names(dataclust)
+df <- data.frame(x = Cyclistes$id_hog_pers)
+df[c("id_hog", "id_pers")] <- do.call(rbind, strsplit(df$x, "-"))
+Cyclistes$id_hog <- df$id_hog
+rm(df)
+```
+
+### Récupération dans le tableau initial du profil issu de la typologie
+```{r ajout colonne profil dans tableau initial}
+Cyclistes$profil <- dataclust$clust
+```
+
+### Export du tableau au format excel
+```{r export}
+write.xlsx(Cyclistes, "TypoProfilCyclistesFINAL.xlsx")
+#browseURL("TypoProfilCyclistesFINAL.xlsx")
+```
+
+# Cartographie de la localisation des profils de cyclistes suivant leur lieu de résidence et de destination
+
+## Carte des lieux de résidence des cyclistes suivant leur profil
+
+### Préparation du jeu de données pour l'élaboration des cartes
+#### Importation des coordonnées XY du lieu de résidence des ménages comptant au moins un cycliste
+```{r import fichier excel coord XY mza residence}
+CoordXY_Menages <- read.xlsx("CoordXY_Menages.xlsx")
+```
+
+#### Jointure des coordonnées XY du lieu de résidence dans le tableau des cyclistes
+```{r jointure des coord XY dans le tableau des cyclistes}
+Cyclistes <- merge(Cyclistes, CoordXY_Menages, by = "id_hog")
+```
+
+#### Importation de la couche des UTAM (Unités Territoriales d'Analyse de la Mobilité)
+```{r import UTAM}
+UTAM <- st_read("EMU2019_UTAM_Bgta.gpkg")
+```
+
+#### Création d'un semis de points (objet sf) à partir des coordonnées XY du lieu de résidence des cyclistes
+```{r creation semis de points residence des cyclistes}
+ResidCyclistes<- st_as_sf(Cyclistes, 
+                          coords = c("X_Hog","Y_Hog"), 
+                          crs = st_crs(UTAM)$srid)
+plot(st_geometry(ResidCyclistes), pch = ".", main = "Lieu de résidence des cyclistes enquêtés dans l'EMU-2019 (Bogotá)")
+```
+
+#### Tri des profils
+```{r tri des profils}
+# étape nécessaire en vue de créer des cartes de densité lissées donnant à voir la concentration des lieux de résidence des cyclistes suivant leur profil
+## pour créer une liste des profils de cyclistes, dans l'ordre
+Cyclistes <- Cyclistes[order(Cyclistes$profil, decreasing = FALSE), ]
+ListProfils <- unique(Cyclistes$profil)
+```
+
+### Série de cartes de densité montrant la concentration des lieux de résidence des cyclistes suivant leur profil
+```{r carto, warning=FALSE, fig.height=13, fig.width=13}
+# définition du nombre de classes
+nclass <- 6
+
+#création d'un ensemble de palettes de couleurs dans un objet "list"
+pal <- list(
+  pal1 = hcl.colors(nclass, "YlOrRd", rev = TRUE),
+  pal2 = hcl.colors(nclass, "Greens 3", rev = TRUE),
+  pal3 = hcl.colors(nclass, "Reds 3", rev = TRUE),
+  pal4 = hcl.colors(nclass, "Grays", rev = TRUE),
+  pal5 = hcl.colors(nclass, "Oslo", rev = FALSE),
+  pal6 = hcl.colors(nclass, "Red-Purple", rev = TRUE),
+  pal7 = hcl.colors(nclass, "Inferno", rev = TRUE),
+  pal8 = hcl.colors(nclass, "Reds", rev = TRUE),
+  pal9 = hcl.colors(nclass, "Blues 3", rev = TRUE),
+  pal10 = hcl.colors(nclass, "Purples 3", rev = TRUE)
+)
+
+# pour définir comme emprise pour le lissage, l'étendue des UTAM
+Emprise <- as.owin(st_buffer(UTAM, 1000))
+
+# Paramétrage des marges pour insérer le titre général et les titres de chaque carte
+par(oma = c(3.5,0,3,0)+0.1, mar = c(0, 0.5, 1.2, 0.5))
+
+# pour découper la fenêtre en 2 lignes et 3 colonnes (6 profils)
+par(mfrow = c(2,3))
+
+# pour définir la taille du rayon (en m.)
+  rayon <- 1000
+  
+# pour définir la taille du pixel (en m.)
+  resol <- 100 # ici 100m x 100m = 1 ha.
+
+# boucle pour produire et cartographier une surface de densité par profil
+for (i in ListProfils){
+  
+  # Récuperation des jeux de données par profil
+  fichier <- Cyclistes[which(Cyclistes$profil == i),]
+  
+  # pour récupérer les coordonnées des lieux de résidence
+  pts <- st_coordinates(st_as_sf(fichier, coords = c("X_Hog","Y_Hog"), crs = st_crs(UTAM)$srid))
+  
+  # pour creer un objet ppp (format spatstat) et y integrer dedans l'emprise
+  fichier.ppp <- ppp(pts[,1], pts[,2], window = Emprise)
+
+  # pour calculer la surface de densité (rayon lissage : 1000 m et résolution spatiale de l'image : 100m x 100m = 1 ha)
+  cartelissee <- density(fichier.ppp, sigma = rayon, kernel = "gaussian", eps = resol)
+  
+  # Conversion de la surface lissée au format SpatRaster
+  cartelissee.raster <- rast(cartelissee)
+  crs(cartelissee.raster) <- st_crs(UTAM)$srid # pour spécifier un SCR à l'objet raster
+
+  # passage des densités à des effectifs (multiplication des densités par la surface du cercle)
+  values(cartelissee.raster) <- abs(values(cartelissee.raster) * pi * rayon **2)
+
+  # découpage du raster sur l'emprise des UTAM
+  cartelissee.raster <- mask(cartelissee.raster, UTAM)
+
+  # Définition des seuils de classes (intervalles égaux)
+  bks <- seq(from = min(values(cartelissee.raster), na.rm = TRUE), 
+           to = max(values(cartelissee.raster), na.rm = TRUE), 
+           by = (max(values(cartelissee.raster), na.rm = TRUE) - min(values(cartelissee.raster), na.rm = TRUE)) / nclass)
+
+  # reclassification de la surface lissée
+  cartelissee.reclass <- classify(cartelissee.raster, rcl = bks)
+  
+  # vectorisation de la surface reclassée
+  cartelissee.vecteur <- st_as_sf(as.polygons(cartelissee.reclass))
+  
+  # Tracer la carte
+  plot(st_geometry(UTAM), border = NA, bg = "grey60")
+  
+  plot(st_geometry(cartelissee.vecteur), col = unlist(pal[as.numeric(i)]), border = NA, add = TRUE)
+  
+  mf_legend(
+         type = "choro",
+         val = bks, 
+         pos = "bottomright",
+         title = "Nb. de ménages\navec cyclistes\ndans un rayon\nde 1 km.\n",
+         title_cex = 1,
+         val_cex = 0.8,
+         val_rnd = 1,
+         no_data = FALSE,
+         pal = unlist(pal[as.numeric(i)]),
+         box_border = "white",
+         size = 0.4,
+         box_cex = c(3, 2)
+       )
+
+  title(main = paste("Profil", i, sep = "-"))
+  
+  mtext(text = paste0("n = ", nrow(fichier), " cyclistes"), 
+      side = 3, line = -2, adj = 0.1, cex = 0.7)
+  
+}
+
+mf_scale(
+  lwd = 1.5,
+  cex = 0.6,
+  pos = "bottomleft",
+  scale_units = "m"
+)
+
+mf_arrow(pos = "topright")
+
+# Pour afficher le titre principal et la source
+mtext("Lieux de résidence des cyclistes par profil dans l'AM de Bogotá", cex = 1.3, side = 3, line = 1, adj = 0.5, outer = TRUE)
+mtext("   Sources : EMU2019 - SDM - Rayon de lissage : 1000 m et résolution : 1 ha", side = 1, line = 1, adj = 0, cex = 0.6, outer = TRUE)
+
+rm(i, fichier)
+```
+
+## Carte des lieux d’arrivée du premier trajet en vélo depuis le domicile
+```{r import lieu destination}
+Destination1erTrajet <- st_read("Centroides_ZAT_Destination_1er_Trajet_Depuis_Domicile.gpkg")
+```
+
+### Préparation du jeu de données
+
+#### Création d'une liste de personnes ayant au moins une destination connue
+```{r creation liste des personnes ayant une destination}
+listDestination1erTrajet <- as.character(Destination1erTrajet$id_concat)
+```
+
+#### Sélection des personnes ayant une destination connue
+```{r selection des personnes ayant une destination}
+Cyclistes <- Cyclistes[Cyclistes$id_hog_pers %in% listDestination1erTrajet, ]
+```
+
+#### Jointure pour récuperer le profil des cyclistes sur le lieu de destination
+```{r jointure pour recuperer profil sur lieu destination}
+Destination1erTrajet <- merge(Destination1erTrajet, Cyclistes[c("profil", "id_hog_pers")], by.x = "id_concat", by.y = "id_hog_pers")
+```
+
+### Création de la deuxième série de cartes par lieux de destination
+```{r deuxieme serie carte, warning=FALSE, fig.height=13, fig.width=13}
+# Paramétrage des marges pour insérer le titre général et les titres de chaque carte
+par(oma = c(3.5,0,3,0)+0.1, mar = c(0, 0.5, 1.2, 0.5))
+
+# pour découper la fenêtre en 2 lignes et 3 colonnes (6 profils)
+par(mfrow = c(2,3))
+
+# définition du nombre de classes
+nclass <- 6
+
+# pour définir la taille du rayon (en m.)
+rayon <- 1000
+  
+# pour définir la taille du pixel (en m.)
+resol <- 100 # ici 100m x 100m = 1 ha.
+
+# boucle pour produire et cartographier une surface de densité par profil
+for (i in ListProfils){
+  
+  # Récuperation des jeux de données par profil
+  fichier <- Destination1erTrajet[which(Destination1erTrajet$profil == i),]
+  
+  # pour récupérer les coordonnées des lieux de résidence
+  pts <- st_coordinates(fichier)
+  
+  # pour créer un objet ppp (format spatstat) et y intégrer dedans l'emprise
+  fichier.ppp <- ppp(pts[,1], pts[,2], window = Emprise)
+  
+  # pour calculer la surface de densité (rayon lissage : 1000 m et resolution spatiale de l'image : 100m x 100m = 1 ha)
+  cartelissee <- density(fichier.ppp, sigma = rayon, kernel = "gaussian", eps = resol)
+  
+  # Conversion de la surface lissée au format SpatRaster
+  cartelissee.raster <- rast(cartelissee)
+  crs(cartelissee.raster) <- st_crs(UTAM)$srid # pour spécifier un SCR à l'objet raster
+
+  # passage des densités à des effectifs (multiplication des densités par la surface du cercle)
+  values(cartelissee.raster) <- abs(values(cartelissee.raster) * pi * rayon **2)
+
+  # découpage du raster sur l'emprise des UTAM
+  cartelissee.raster <- mask(cartelissee.raster, UTAM)
+
+  # Définition des seuils de classes (intervalles égaux)
+  bks <- seq(from = min(values(cartelissee.raster), na.rm = TRUE), 
+			to = max(values(cartelissee.raster), na.rm = TRUE), 
+			by = (max(values(cartelissee.raster), na.rm = TRUE) - min(values(cartelissee.raster), na.rm = TRUE)) / nclass)
+
+  # reclassification de la surface lissée
+  cartelissee.reclass <- classify(cartelissee.raster, rcl = bks)
+  
+  # vectorisation de la surface reclassée
+  cartelissee.vecteur <- st_as_sf(as.polygons(cartelissee.reclass))
+  
+  # Tracer la carte
+  plot(st_geometry(UTAM), border = NA, bg = "grey60")
+  
+  plot(st_geometry(cartelissee.vecteur), col = unlist(pal[as.numeric(i)]), border = NA, add = TRUE)
+  
+  mf_legend(
+         type = "choro",
+         val = bks, 
+         pos = "bottomright",
+         title = "Nb. de destinations\ndans un rayon\nde 1 km.\n",
+         title_cex = 1,
+         val_cex = 0.8,
+         val_rnd = 1,
+         no_data = FALSE,
+         pal = unlist(pal[as.numeric(i)]),
+         box_border = "white",
+         size = 0.4,
+         box_cex = c(3, 2)
+       )
+
+  title(main = paste("Profil", i, sep = "-"))
+  
+  mtext(text = paste0("n = ", nrow(fichier), " cyclistes"), 
+      side = 3, line = -2, adj = 0.1, cex = 0.7)
+  
+}
+
+mf_scale(
+  lwd = 1.5,
+  cex = 0.6,
+  pos = "bottomleft",
+  scale_units = "m"
+)
+
+mf_arrow(pos = "topright")
+
+# Pour afficher le titre principal et la source
+mtext("Destination des premiers trajets à vélo depuis le domicile à Bogotá", cex = 1.3, side = 3, line = 1, adj = 0.5, outer = TRUE)
+mtext("   Sources : EMU2019 - SDM - Rayon de lissage : 1000 m et résolution : 1 ha", side = 1, line = 1, adj = 0, cex = 0.6, outer = TRUE)
+
+rm(i, fichier)
+```
