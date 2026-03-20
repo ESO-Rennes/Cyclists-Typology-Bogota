@@ -150,7 +150,7 @@ classification ascendante hiérarchique. L'analyse combine des caractéristiques
 sociodémographiques de 3241 individus et des variables décrivant leurs
 pratiques de mobilité. Des cartes montrant la concentration des lieux de
 résidence et la concentration des lieux de destination des six profils de
-marcheurs sont proposées. La méthode développée dans R est reproductible à
+cyclistes sont proposées. La méthode développée dans R est reproductible à
 d'autres zones urbaines et à d'autres groupes de personnes utilisant d'autres
 modes déplacement.<o:p></o:p></span></p>
 
