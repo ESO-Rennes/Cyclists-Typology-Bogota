@@ -11,7 +11,7 @@ font-family:"Segoe UI",sans-serif;mso-fareast-font-family:"Times New Roman";
 color:#1F2328;mso-ansi-language:EN-GB;mso-fareast-language:FR'>----- ENGLISH
 VERSION -----<br>
 <i>This work was carried out by&nbsp;<span class=SpellE><a
-href="https://perso.univ-rennes2.fr/maelle.lucas">Maëlle Lucas</a></span> and&nbsp;</i></span><i><span
+href="https://pagespro.univ-gustave-eiffel.fr/maelle-lucas">Maëlle Lucas</a></span> and&nbsp;</i></span><i><span
 style='font-size:12.0pt;font-family:"Segoe UI",sans-serif;mso-fareast-font-family:
 "Times New Roman";color:#1F2328;mso-ansi-language:FR;mso-fareast-language:FR'><a
 href="https://perso.univ-rennes2.fr/florent.demoraes"><span lang=EN-GB
