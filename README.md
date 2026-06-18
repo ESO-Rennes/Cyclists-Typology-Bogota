@@ -55,11 +55,11 @@ of people using other travel modes.<o:p></o:p></span></p>
 white'><span lang=EN-GB style='font-size:12.0pt;font-family:"Segoe UI",sans-serif;
 mso-fareast-font-family:"Times New Roman";color:#1F2328;mso-ansi-language:EN-GB;
 mso-fareast-language:FR'>This study is part of a PhD thesis developed by&nbsp;<a
-href="https://perso.univ-rennes2.fr/maelle.lucas"><span class=SpellE>Maëlle</span>
+href="https://hal.science/tel-04933444"><span class=SpellE>Maëlle</span>
 Lucas</a>&nbsp;and also part of the activities of the&nbsp;</span><span
 class=SpellE><span style='font-size:12.0pt;font-family:"Segoe UI",sans-serif;
 mso-fareast-font-family:"Times New Roman";color:#1F2328;mso-ansi-language:FR;
-mso-fareast-language:FR'><a href="https://modural.hypotheses.org/le-projet"><span
+mso-fareast-language:FR'><a href="https://modural.hypotheses.org/le-projet-modural/the-project"><span
 lang=EN-GB style='mso-ansi-language:EN-GB'>Modural</span><span lang=EN-GB
 style='mso-ansi-language:EN-GB'> program</span></a></span></span><span
 lang=EN-GB style='font-size:12.0pt;font-family:"Segoe UI",sans-serif;
