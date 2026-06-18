@@ -192,7 +192,7 @@ mso-fareast-language:FR'>--&gt; Accès au&nbsp;<a
 href="https://github.com/ESO-Rennes/Cyclists-Typology-Bogota/blob/main/ScriptTypoCyclistesAFDM_v10.Rmd"><b>script
 R <span class=SpellE>markdown</span></b></a><br>
 --&gt; Accès à&nbsp;<a
-href="https://htmlpreview.github.io/?https://github.com/ESO-Rennes/Cyclists-Typology-Bogota/blob/main/ScriptTypoCyclistesAFDM_v10.html"><b>la
+href="https://rpubs.com/Bac_A_Sable/profils_cyclistes_Bogota_2019_FR"><b>la
 sortie HTML</b></a><br>
 --&gt; Accès aux&nbsp;<a
 href="https://github.com/ESO-Rennes/Cyclists-Typology-Bogota/raw/main/data.zip"><b>données
