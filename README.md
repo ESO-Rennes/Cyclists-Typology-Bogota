@@ -95,32 +95,11 @@ mso-fareast-language:FR'><br>
 --&gt; Access to the&nbsp;</span><span style='font-size:12.0pt;font-family:
 "Segoe UI",sans-serif;mso-fareast-font-family:"Times New Roman";color:#1F2328;
 mso-ansi-language:FR;mso-fareast-language:FR'><a
-href="https://raw.githubusercontent.com/ESO-Rennes/Cyclists-Typology-Bogota/main/ScriptTypoCyclistesAFDM_v10_ENG.html" 
-onclick="forceDownload(event, this.href, 'ScriptTypoCyclistesAFDM_v10_ENG.html')"><b><span
+href="https://htmlpreview.github.io/?https://github.com/ESO-Rennes/Cyclists-Typology-Bogota/blob/main/ScriptTypoCyclistesAFDM_v10_ENG.html"><b><span
 lang=EN-GB style='mso-ansi-language:EN-GB'>HTML laid-out output</span></b></a></span><span
 lang=EN-GB style='font-size:12.0pt;font-family:"Segoe UI",sans-serif;
 mso-fareast-font-family:"Times New Roman";color:#1F2328;mso-ansi-language:EN-GB;
-mso-fareast-language:FR'><br>
-
-<script>
-function forceDownload(event, url, filename) {
-    event.preventDefault(); // Empêche le navigateur d'ouvrir le lien normalement
-    fetch(url)
-        .then(response => response.blob())
-        .then(blob => {
-            const blobUrl = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = blobUrl;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(blobUrl);
-            document.body.removeChild(a);
-        })
-        .catch(() => window.location.href = url); // Repli si le téléchargement échoue
-}
-</script>
+mso-fareast-language:FR'><br> 
 --&gt; Access to the&nbsp;</span><span class=SpellE><span style='font-size:
 12.0pt;font-family:"Segoe UI",sans-serif;mso-fareast-font-family:"Times New Roman";
 color:#1F2328;mso-ansi-language:FR;mso-fareast-language:FR'><a
