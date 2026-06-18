@@ -95,7 +95,7 @@ mso-fareast-language:FR'><br>
 --&gt; Access to the&nbsp;</span><span style='font-size:12.0pt;font-family:
 "Segoe UI",sans-serif;mso-fareast-font-family:"Times New Roman";color:#1F2328;
 mso-ansi-language:FR;mso-fareast-language:FR'><a
-href="https://htmlpreview.github.io/?https://github.com/ESO-Rennes/Cyclists-Typology-Bogota/blob/main/ScriptTypoCyclistesAFDM_v10_ENG.html"><b><span
+href="https://raw.githubusercontent.com/ESO-Rennes/Cyclists-Typology-Bogota/main/ScriptTypoCyclistesAFDM_v10_ENG.html" download="ScriptTypoCyclistesAFDM_v10_ENG.html"><b><span
 lang=EN-GB style='mso-ansi-language:EN-GB'>HTML laid-out output</span></b></a></span><span
 lang=EN-GB style='font-size:12.0pt;font-family:"Segoe UI",sans-serif;
 mso-fareast-font-family:"Times New Roman";color:#1F2328;mso-ansi-language:EN-GB;
