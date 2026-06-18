@@ -19,7 +19,7 @@ style='mso-ansi-language:EN-GB'>Florent <span class=SpellE>Demoraes</span></span
 lang=EN-GB style='font-size:12.0pt;font-family:"Segoe UI",sans-serif;
 mso-fareast-font-family:"Times New Roman";color:#1F2328;mso-ansi-language:EN-GB;
 mso-fareast-language:FR'>&nbsp;at the CNRS ESO research unit in Rennes
-(France), in March 2021 and updated in October 2025.</span></i><span
+(France), in March 2021 and updated in June 2026.</span></i><span
 lang=EN-GB style='font-size:12.0pt;font-family:"Segoe UI",sans-serif;
 mso-fareast-font-family:"Times New Roman";color:#1F2328;mso-ansi-language:EN-GB;
 mso-fareast-language:FR'><o:p></o:p></span></p>
