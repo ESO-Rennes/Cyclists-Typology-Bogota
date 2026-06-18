@@ -144,7 +144,7 @@ mso-fareast-font-family:"Times New Roman";color:#1F2328;mso-ansi-language:FR;
 mso-fareast-language:FR'>Ce billet présente une méthode pour concevoir une
 typologie d’usagers du vélo à partir d'une Enquête Ménages Déplacements menée
 en 2019 à Bogotá, et disponible en&nbsp;<a
-href="https://www.simur.gov.co/encuestas-de-movilidad">open data</a>. La
+href="https://www.simur.gov.co/encuestas-de-movilidad">open data</a> (VPN requis pour un accès en dehors de la Colombie). La
 méthode repose sur une analyse factorielle de données mixtes et sur une
 classification ascendante hiérarchique. L'analyse combine des caractéristiques
 sociodémographiques de 3241 individus et des variables décrivant leurs
@@ -161,7 +161,7 @@ mso-fareast-language:FR'>Cette étude fait partie d'une thèse de doctorat
 menée par&nbsp;</span><span lang=EN-GB style='font-size:12.0pt;font-family:
 "Segoe UI",sans-serif;mso-fareast-font-family:"Times New Roman";color:#1F2328;
 mso-ansi-language:EN-GB;mso-fareast-language:FR'><a
-href="https://perso.univ-rennes2.fr/maelle.lucas"><span lang=FR
+href="https://hal.science/tel-04933444"><span lang=FR
 style='mso-ansi-language:FR'>Maëlle Lucas</span></a></span><span
 style='font-size:12.0pt;font-family:"Segoe UI",sans-serif;mso-fareast-font-family:
 "Times New Roman";color:#1F2328;mso-ansi-language:FR;mso-fareast-language:FR'>&nbsp;et
