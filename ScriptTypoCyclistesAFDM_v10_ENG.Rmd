@@ -1,0 +1,1044 @@
+---
+title: Profiles of cyclists and their spatial distribution in Bogotá
+author: "[Maëlle Lucas](https://pagespro.univ-gustave-eiffel.fr/maelle-lucas) and [Florent Demoraes](https://perso.univ-rennes2.fr/florent.demoraes)"
+date: "18/11/2022 — Updated on `r format(Sys.Date(), '%d/%m/%Y')`"
+output:
+  html_document:
+    toc: true
+    number_sections: true
+    toc_depth: 4
+    css: styles.css
+    code_folding: "show"
+  pdf_document:
+    toc: true
+    toc_depth: '4'
+  word_document:
+    toc: true
+    number_sections: true
+    toc_depth: 4
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(out.width = "100%")
+```
+
+This program presents the steps used to construct a typology of bicycle users based on the 2019 Household Travel Survey conducted in Bogotá and made available as open data. The method relies on a factor analysis of mixed data (FAMD) and a hierarchical cluster analysis (HCA). The approach combines sociodemographic characteristics of 3,241 individuals and variables describing their mobility practices. Maps showing the concentration of residence locations and destination locations for the six cyclist profiles are provided The method developed in R is reproducible for other urban areas and other groups of people using other modes of transport.
+
+# Calculation of cyclist profiles combining FAMD and HCA
+## Loading required packages
+```{r loading package, warning=FALSE, message = FALSE, error=FALSE}
+library(openxlsx) # For importing/exporting from/to Excel
+library(FactoMineR) # To run factor analyses (such as FAMD) and classifications (e.g., HCA)
+library(factoextra) # To enhance the rendering of graphs produced by FactoMineR
+library(dplyr) # To facilitate data manipulation
+library(tidyr) # To switch from long to wide format
+library(fmsb) # To produce radar charts
+library(ggplot2) # To produce advanced graphics
+library(sf) # To manipulate spatial objects
+library(spatstat) # For spatial smoothing
+library(terra) # For processing raster data
+library(mapsf) # For cartographic representation and map layout
+library(ggnewscale) # To set color palettes for ggplot graphs
+library(plotly) # To plot 3D graphs
+library(geometry) # To plot convex hulls
+library(ggiraph) # To create interactive graphs from ggplot
+library(patchwork) # To combine multiple graphs on the same layout
+```
+
+## Importing input data (Excel file)
+```{r Import data}
+# Import of the table of individuals who used the bicycle as their main mode of transport in the city the day before the survey
+Cyclistes <- read.xlsx("Cyclistes.xlsx", sheet = "VariablesCyclistes")
+rownames(Cyclistes) <- Cyclistes$id_hog_pers # To add the person's ID as row names
+Cyclistes$id_hog_pers <- NULL # To remove the column
+head(Cyclistes)
+str(Cyclistes)
+summary(Cyclistes)
+```
+
+## Calculation of a first FAMD with all variables to determine cyclist profiles
+```{r First FAMD, warning=FALSE, message = FALSE, error=FALSE, fig.height=15, fig.width=15}
+res <- FAMD(Cyclistes, graph = FALSE)
+
+contrib <- transform(data.frame(res$ind$contrib), contribPlan1 = Dim.1 + Dim.2)
+selected_individuals <- rownames(contrib)[contrib$contribPlan1 >= quantile(contrib$contribPlan1, 0.99)] # Creating a list of individuals whose labels will be displayed on the graphs (only 1% are selected here to avoid cluttering the graphs)
+rm(contrib)
+
+plot.FAMD(res, title = "FAMD individual plot with categorical values", cex = 0.9, cex.main = 1, graph.type = "ggplot", cex.axis = 0.75, label = c('ind','quali.var'), select = selected_individuals)
+
+plot.FAMD(res, title = "Plot of categorical values", cex = 0.9, cex.main = 1, graph.type = "ggplot", cex.axis = 0.75, invisible = "ind")
+
+plot.FAMD(res, choix = "var", title = "Plot of centers of quantitative and categorical variables", cex = 0.9, cex.main = 1, graph.type = "ggplot", cex.axis = 0.75, xlim = c(0, 0.8), ylim = c(0, 0.55))
+
+plot.FAMD(res, choix = "quanti", title = "Correlation plot of quantitative variables", cex = 0.9, cex.main = 1, graph.type = "ggplot", cex.axis = 0.75)
+```
+
+## Adjustment of the first FAMD to increase inertia on the first plane
+
+### Removal of poorly discriminating variables
+```{r removing poorly discriminating variables}
+Cyclistes$Experi <- NULL
+Cyclistes$NumMoto <- NULL
+Cyclistes$NumViajDia <- NULL
+Cyclistes$PartModInd <- NULL
+```
+
+### Display of the list of remaining variables
+```{r display variables list}
+print(as.data.frame(colnames(Cyclistes)))
+```
+
+### Removal of individuals with abnormally long average trip durations
+```{r removing outliers, warning=FALSE, message = FALSE, error=FALSE}
+Cyclistes <- Cyclistes[Cyclistes$Duracion < 300,]
+```
+
+## Second FAMD calculation after removing poorly discriminating variables and setting some as supplementary
+```{r second FAMD, warning=FALSE, message = FALSE, error=FALSE, fig.height=15, fig.width=15}
+res <- FAMD(Cyclistes, sup.var = c(2,6,9,10,11,15,17), graph = FALSE)
+
+contrib <- transform(data.frame(res$ind$contrib), contribPlan1 = Dim.1 + Dim.2)
+selected_individuals <- rownames(contrib)[contrib$contribPlan1 >= quantile(contrib$contribPlan1, 0.95)] # Creating a list of individuals whose labels will be displayed on the graphs (only 5% are selected here to avoid cluttering the graphs)
+rm(contrib)
+
+plot.FAMD(res, title = "FAMD individual plot with categorical values", cex = 0.6, cex.main = 1, graph.type = "ggplot", cex.axis = 0.75, label = c('ind','quali.var'), select = selected_individuals)
+
+plot.FAMD(res, title = "Plot of categorical values", cex = 0.7, cex.main = 1, graph.type = "ggplot", cex.axis = 0.75, invisible = "ind")
+
+plot.FAMD(res, choix = "var", title = "Plot of centers of quantitative and categorical variables", cex = 0.7, cex.main = 1, graph.type = "ggplot", cex.axis = 0.75, xlim = c(0, 0.55), ylim = c(0, 0.45))
+
+plot.FAMD(res, choix = "quanti", title = "Correlation plot of quantitative variables", cex = 0.9, cex.main = 1, graph.type = "ggplot", cex.axis = 0.75)
+
+```
+
+## Running HCA on the results of the FAMD
+### Inertia gain plot and 2D factor plane (static mode)
+```{r Running HCA, warning=FALSE, message = FALSE, error=FALSE, fig.height=10, fig.width=15}
+nbclasses <- 6 # Test with different numbers of clusters
+res.hcpc <- HCPC(res, kk = Inf, nb.clust = nbclasses, consol = FALSE, graph = FALSE) # kk = Inf means no prior partition, consol = FALSE means no consolidation (by k-means) after HCA
+plot(res.hcpc, choice = "tree", labels = FALSE)
+
+# Creation of the initial 2D graph
+cluster_colors <- c("blue", "green", "red", "yellow", "black", "cyan")
+d <- fviz_cluster(res.hcpc,
+             repel = TRUE,
+             show.clust.cent = FALSE,   # No centers
+             palette = cluster_colors,
+             ggtheme = theme_gray(),
+             main = "Factor plane",
+             geom = "point",
+             pointsize = 0.25,
+             alpha = 0.6,
+             ellipse = TRUE,
+             ellipse.type = "convex",
+             ellipse.alpha = 0.2,
+             ellipse.linetype = "solid",  # Solid line for ellipses
+             star.plot = FALSE,
+             shape = 19)                  # Identical points
+
+# Modify the graph
+d_modified <- d +
+  geom_hline(yintercept = 0, color = "black", linetype = "dashed") +  
+  geom_vline(xintercept = 0, color = "black", linetype = "dashed") +  
+  theme(
+    plot.margin = margin(10, 10, 10, 10), 
+    aspect.ratio = 0.5
+  )
+
+# Display the modified graph
+print(d_modified)
+```
+
+
+### Interactive 3D factor plane
+```{r 3D factor plane, warning=FALSE, message = FALSE, error=FALSE, fig.width=15}
+# Retrieve individual coordinates on the factor axes
+ind_coords <- as.data.frame(res$ind$coord)[, 1:3]  # Axes 1, 2, 3
+colnames(ind_coords) <- c("Dim.1", "Dim.2", "Dim.3")  # Rename columns
+ind_coords$cluster <- as.factor(res.hcpc$data.clust$clust)  # Add clusters
+ind_coords$cluster <- factor(ind_coords$cluster, levels = sort(unique(ind_coords$cluster)))
+
+# Retrieve inertia
+inertia <- res$eig[1:3, 2]  # % inertia for axes 1, 2, and 3
+
+# Assign colors to clusters
+names(cluster_colors) <- levels(ind_coords$cluster)
+
+# Function to get the color of a given cluster (used for convex hulls)
+get_cluster_color <- function(cluster) {
+  return(cluster_colors[as.character(cluster)])
+}
+
+# Initialize the graph
+fig <- plot_ly()
+
+# Add individual points in black
+fig <- fig %>% add_trace(
+  data = ind_coords, 
+  x = ~Dim.1, y = ~Dim.2, z = ~Dim.3,
+  type = "scatter3d", 
+  mode = "markers",
+  marker = list(color = "black", size = 1, opacity = 0.8),
+  showlegend = FALSE,
+  inherit = FALSE
+)
+
+# Calculate maximum ranges for each axis
+max_range <- max(abs(as.matrix(ind_coords[,1:3]))) * 1.1
+
+# Create dashed axis lines passing through the origin
+fig <- fig %>% 
+  add_trace(
+    x = c(-max_range, max_range), 
+    y = c(0, 0), 
+    z = c(0, 0),
+    type = "scatter3d", 
+    mode = "lines",
+    line = list(color = "grey80", dash = "dash", width = 0.5),
+    showlegend = FALSE,
+    inherit = FALSE,
+    name = ""
+  ) %>%
+  add_trace(
+    x = c(0, 0), 
+    y = c(-max_range, max_range), 
+    z = c(0, 0),
+    type = "scatter3d", 
+    mode = "lines",
+    line = list(color = "grey80", dash = "dash", width = 0.5),
+    showlegend = FALSE,
+    inherit = FALSE,
+    name = ""
+  ) %>% 
+  add_trace(
+    x = c(0, 0), 
+    y = c(0, 0), 
+    z = c(-max_range, max_range),
+    type = "scatter3d", 
+    mode = "lines",
+    line = list(color = "grey80", dash = "dash", width = 0.5),
+    showlegend = FALSE,
+    inherit = FALSE,
+    name = ""
+  )
+
+# Add convex hulls for each cluster with the palette colors
+for (clus in levels(ind_coords$cluster)) {
+  cluster_points <- ind_coords[ind_coords$cluster == clus, c("Dim.1", "Dim.2", "Dim.3")]
+  hull <- convhulln(cluster_points)  # Direct calculation, without condition
+  
+  col <- cluster_colors[as.character(clus)]
+
+  fig <- fig %>% add_trace(
+    type = "mesh3d",
+    x = cluster_points$Dim.1,
+    y = cluster_points$Dim.2,
+    z = cluster_points$Dim.3,
+    i = hull[,1] - 1,
+    j = hull[,2] - 1,
+    k = hull[,3] - 1,
+    opacity = 0.2,
+    facecolor = rep(col, nrow(hull)), 
+    flatshading = TRUE,
+    showscale = FALSE,
+    name = paste("Cluster", clus),
+    showlegend = TRUE,
+    inherit = FALSE
+  )
+
+}
+
+# Disable projected panes and add a uniform gray background
+fig <- fig %>%
+  layout(
+    paper_bgcolor = "#D3D3D3",
+    plot_bgcolor = "#D3D3D3",
+    scene = list(
+      xaxis = list(
+        title = "",
+        showbackground = FALSE,
+        showline = FALSE,          # Remove axis line
+        showticklabels = FALSE,    # Remove numeric tick labels
+        zeroline = FALSE,          # Remove default zero line
+        showgrid = FALSE           # Optional: remove grid
+      ),
+      yaxis = list(
+        title = "",
+        showbackground = FALSE,
+        showline = FALSE,
+        showticklabels = FALSE,
+        zeroline = FALSE,
+        showgrid = FALSE
+      ),
+      zaxis = list(
+        title = "",
+        showbackground = FALSE,
+        showline = FALSE,
+        showticklabels = FALSE,
+        zeroline = FALSE,
+        showgrid = FALSE
+      ),
+      aspectmode = "manual",
+      aspectratio = list(x = 1.5, y = 1, z = 1)
+    ),
+    showlegend = TRUE
+  )
+
+# Configure the legend with a title
+fig <- fig %>% layout(
+  legend = list(
+    title = list(text = "<b>Profiles</b>"),  # Legend title
+    font = list(size = 10)  # Title font style
+  )
+)
+
+
+
+# Display the graph
+fig
+```
+
+
+
+
+
+## Calculation of the table with cluster sizes and the associated bar chart
+```{r preparing table with cluster sizes, fig.height=10, fig.width=15}
+dataclust <- as.data.frame(res.hcpc[["data.clust"]])
+IndividusClasse <- table(dataclust$clust) # To create a table with the number of individuals per each cluster
+print(IndividusClasse)
+barplot(table(dataclust$clust), main = "Number of individuals by profile")
+```
+
+## Production of graphs to describe the clusters
+
+### Identification of categorical variables with only two values
+```{r handling categorical variables with only two values}
+# This operation is necessary to simplify the graphs later
+TableauVariablesCategorielles <- Filter(is.character, Cyclistes)
+
+NbModalitesParVariable <- data.frame()
+
+for (i in colnames(TableauVariablesCategorielles)){
+
+  # Retrieve the number of values for each categorical variable
+  fichier <- length(unique(TableauVariablesCategorielles[[i]]))
+  NbModalitesParVariable <- rbind(NbModalitesParVariable, fichier)
+  
+}
+
+rm(i, fichier)
+
+NbModalitesParVariable$Variable <- colnames(TableauVariablesCategorielles)
+
+VariablesDeuxModalites <- NbModalitesParVariable[which(NbModalitesParVariable[,1] == 2),]
+VariablesDeuxModalites <- as.character(VariablesDeuxModalites$Variable)
+```
+
+### Setting the v.test threshold for selecting discriminant variables to describe clusters
+```{r v.test threshold setting}
+# By default v.test > |1.96| - In this case, raising the threshold reduces the number of variables that will describe the clusters. Only extremely significant ones are kept.
+Seuil.v.test <- 3.29 # Accepting a 1 in 1000 chance of error
+# learn more https://www.medcalc.org/manual/values-of-the-normal-distribution.php
+```
+
+### Creation of tables describing profiles by quantitative and categorical variables and display of bar charts
+```{r selecting variables with only two categorical values, fig.height=10}
+# For variables with only two categorical values, only one is kept
+for (i in 1:nbclasses){
+
+  # Retrieve the description of each of the N clusters by quantitative variables into tables
+  b <- as.data.frame(res.hcpc$desc.var$quanti[[i]])
+  b <- b[which(colnames(b) == 'v.test')]
+  b <- signif(b,3) # To round values
+
+  # Retrieve the description of each of the N clusters by categorical variables into tables
+  c <- as.data.frame(res.hcpc$desc.var$category[[i]])
+  d <- as.data.frame(c$label <- rownames(c))
+  d <- as.data.frame(c$label <- sub("\\=.*", "", c$label))
+  d <- as.data.frame(c[which(c$label %in% VariablesDeuxModalites), ])
+  d <- as.data.frame(d[which(d$v.test > 0),])
+  e <- as.data.frame(c[which(!c$label %in% VariablesDeuxModalites), ])
+  f <- as.data.frame(rbind(d, e))
+  g <- as.data.frame(f$label <- NULL)
+  c <- signif(f,3) # To round values
+  c <- c[which(colnames(c) == 'v.test')]
+
+  # Combine tables with quantitative and categorical variables
+  h <- as.data.frame(rbind(b,c))
+  h <- as.data.frame(cbind(h, h$label <- row.names(h)))
+  colnames(h) <- c("v.test", "label")
+  h <- as.data.frame(h[order(h$v.test, decreasing = TRUE), ])
+  h <- as.data.frame(h[which(!h$v.test == "Inf"),])
+  h <- as.data.frame(h[which(abs(h$v.test) >= Seuil.v.test),])
+
+  # To plot horizontal bar charts
+  op <- par(oma = c(0,7,0,0))
+  barplot((h$v.test), names = row.names(h), border = "white", horiz = TRUE, las = 1, xlim = c(-5 - max(abs(h$v.test)), 5 + max(abs(h$v.test))), cex.names=0.8, main = paste("profile", i, sep = ""))
+  par(op)
+  
+}
+rm(b,c,d,e,f,g,h,i)
+```
+
+### Creation of radar charts to visualize, for each profile, its sociodemographic composition and travel patterns
+```{r Generating radar charts, message=FALSE, warning=FALSE}
+#to reduce margins and set a grey background
+opar <- par(mar = c(2, 2, 2, 2), bg = "grey60")
+
+# Color vector
+colors_border = c("blue", "green" , "red", "yellow", "black", "cyan")
+colors_in = c("blue", "green" , "red", "yellow", "black", "cyan")
+
+## Individual variables (table preparation)
+
+# Gender and driving license
+genre_permis_radar <- dataclust %>%
+  group_by(clust) %>%
+  summarise(muj = sum(Sexo == "Mujer") / n() * 100,
+            permis_cond = sum(LicCondu == "LicCon-Si") / n() * 100)
+
+# AGE
+age_radar <- dataclust %>%
+  group_by(clust, Edad) %>%
+  summarise(effectifs = n()) %>%
+  group_by(clust) %>%
+  mutate(effectifs = effectifs / sum(effectifs) * 100) %>%
+  pivot_wider(names_from = Edad, values_from = effectifs)
+
+# replace NA by 0
+age_radar <- replace(age_radar, is.na(age_radar), 0)
+
+# reorder columns
+age_radar <- age_radar[c(1,5,3,4,2)]
+
+# EDUCATION LEVEL
+NivEduc_radar <- dataclust %>%
+  group_by(clust, NivEducCL) %>%
+  summarise(effectifs = n()) %>%
+  group_by(clust) %>%
+  mutate(effectifs = effectifs / sum(effectifs) * 100) %>%
+  pivot_wider(names_from = NivEducCL, values_from = effectifs)
+
+# replace NA by 0
+NivEduc_radar <- replace(NivEduc_radar, is.na(NivEduc_radar), 0)
+
+# reorder columns
+NivEduc_radar <- NivEduc_radar[c(1,3,2,4,5)]
+
+# combine dataframes
+var_indiv_radar <- cbind(genre_permis_radar, age_radar[-1], NivEduc_radar[-1])
+
+# assign rownames
+rownames(var_indiv_radar) <- paste("profile" , var_indiv_radar$clust , sep = "-")
+var_indiv_radar$clust <- NULL
+
+# To move a column
+var_indiv_radar <- var_indiv_radar %>% relocate(permis_cond, .after = Universitario)
+
+summary(var_indiv_radar)
+
+# to add two rows at the top of the dataframe with the max and min for each variable (based on the previous summary)
+var_indiv_radar <- rbind(rep(100,10) , rep(0,10) , var_indiv_radar)
+
+# to reorder columns
+var_indiv_radar <- var_indiv_radar[, c(1, rev(seq_along(var_indiv_radar)[-1]))]
+
+# plot radar chart
+radarchart(var_indiv_radar, axistype = 1, seg = 5, pty = 32, centerzero = FALSE,
+           #custom polygon
+           pcol = colors_border, pfcol = adjustcolor(colors_in, alpha.f = 0), plwd = 2 , plty = 1,
+           #custom the grid
+           cglcol = "white", cglty = 3, axislabcol = "white", caxislabels = rep("", 10), cglwd = 0.1,
+           #custom labels
+           vlcex = 0.5, calcex = 0.5
+)
+
+# Add a legend
+legend(x = 1.2, y = 1.2, legend = rownames(var_indiv_radar[-c(1,2),]), bty = "n", pch = 18 , col = colors_border, text.col = "black", cex = 0.5, pt.cex = 0.9)
+
+# add a title
+title(main = "Cyclist characteristics by profile\n(summary)", cex.main = 0.8)
+
+# Split the screen in 6 parts to plot each radar separately
+opar <- par(oma = c(0,0,3,0)+0.1, mar = c(0, 0.5, 1.2, 0.5), mfrow = c(2,3), bg = "grey60")
+
+# Plot the radar charts
+for(i in 1:length(unique(dataclust$clust))){
+  radarchart(var_indiv_radar[c(1, 2, i+2), ], axistype = 1, seg = 5, pty = 32, centerzero = FALSE,
+             #custom polygon
+             pcol=colors_border[i], pfcol = adjustcolor(colors_in[i], alpha.f = 0), plwd = 2 , plty = 1,
+             #custom the grid
+             cglcol = "white", cglty = 3, axislabcol = "white", cglwd = 0.1, caxislabels = rep("", 10),
+             #custom labels
+             vlcex = 0.5, palcex = 0.8)
+  
+  # To add a title to each radar
+  title(main = paste("profile", i, sep = "-"), cex.main = 0.8)
+}
+
+# To insert a main title
+mtext("Cyclist characteristics by profile", 
+      cex = 1, side = 3,line = 1, adj = 0.5, outer = TRUE)
+
+# to reset graphic parameters
+par(opar)
+
+
+## Variables characterizing trips and cycling practices (table preparation)
+
+# Trips
+trajet_radar <- dataclust %>%
+  group_by(clust) %>%
+  summarise(
+    travail = sum(MotivoCL == "Trab") / n() * 100,
+    ecole = sum(MotivoCL == "Estudio") / n() * 100,
+    loisir = sum(MotivoCL == "Ocio") / n() * 100,
+    autre = sum(MotivoCL == "Otro") / n() * 100,
+    durée = mean(Duracion),
+    distance = mean(Distancia),
+    FreqSemaine = mean(FrecSemana),
+    FreqWeekEnd = mean (FrecFinSem),
+    Occasionnel = sum(Ocasional == "Ocas-Si") / n() * 100
+  ) %>%
+  as.data.frame()
+
+rownames(trajet_radar) <- paste("profile" , trajet_radar$clust , sep = "-")
+trajet_radar$clust <- NULL
+
+summary(trajet_radar)
+
+# to add two rows at the top of the dataframe with the max and min for each variable (based on the previous summary)
+trajet_radar <- rbind(c(rep(100,4), 60, 20000, 5, 1, 100), rep(0, length(colnames(trajet_radar))), trajet_radar)
+
+# to reorder columns
+trajet_radar <- trajet_radar[, c(1, rev(seq_along(trajet_radar)[-1]))]
+
+# plot radar chart
+radarchart(trajet_radar, axistype = 1 , seg = 5, pty = 32, centerzero = FALSE,
+           #custom polygon
+           pcol = colors_border, pfcol = adjustcolor(colors_in, alpha.f = 0), plwd = 2 , plty = 1,
+           #custom the grid
+           cglcol = "white", cglty = 3, axislabcol = "white", cglwd = 0.1, caxislabels = rep("", 10),
+           #custom labels
+           vlcex = 0.5, calcex = 0.5
+)
+
+# Add a legend
+legend(x = 1.2, y = 1.2, legend = rownames(trajet_radar[-c(1,2),]), bty = "n", pch = 18 , col = colors_border, text.col = "black", cex = 0.5, pt.cex = 0.9)
+
+# add a title
+title(main = "Trip characteristics by profile\n(summary)", cex.main = 0.8)
+
+# Split the screen in 6 parts to plot each radar separately
+opar <- par(oma = c(0,0,3,0)+0.1, mar = c(0, 0.5, 1.2, 0.5), mfrow = c(2,3), bg = "grey60")
+
+# Plot the radar charts
+for(i in 1:length(unique(dataclust$clust))){
+  radarchart(trajet_radar[c(1, 2, i+2), ], axistype = 1, seg = 5, pty = 32, centerzero = FALSE,
+             #custom polygon
+             pcol = colors_border[i], pfcol = adjustcolor(colors_in[i], alpha.f = 0), plwd = 2 , plty = 1,
+             #custom the grid
+             cglcol = "white", cglty = 3, axislabcol = "white", cglwd = 0.1, caxislabels = rep("", 10),
+             #custom labels
+             vlcex = 0.5, palcex = 0.8)
+  
+  # To add a title to each radar
+  title(main = paste("profile", i, sep = "-"), cex.main = 0.8)
+}
+
+# To insert a main title
+mtext("Trip characteristics by profile", 
+      cex = 1, side = 3,line = 1, adj = 0.5, outer = TRUE)
+
+# to reset graphic parameters
+par(opar)
+```
+
+### Creation of vertical stacked bar charts to visualize, for each profile, a first set of contextual variables
+```{r vertical stacked bar charts to visualize for each profile a first set of contextual variables, message=FALSE, warning=FALSE, fig.height=10, fig.width=15}
+
+## Variables characterizing households (table preparation)
+
+# Stratum characterizing the housing and neighborhood standard
+StratesLogt <- dataclust %>%
+  group_by(clust, Estrato) %>%
+  summarise(effectifs = n(), .groups = 'drop') %>%
+  group_by(clust) %>%
+  mutate(effectifs = effectifs / sum(effectifs) * 100) %>%
+  pivot_wider(names_from = Estrato, values_from = effectifs)
+
+# replace NA by 0
+StratesLogt <- replace(StratesLogt, is.na(StratesLogt), 0)
+
+# To move a column
+StratesLogt <- StratesLogt %>% relocate(Estr0, .before = Estr1)
+
+# To coerce df to long format
+StratesLogt_long <- StratesLogt %>%
+  pivot_longer(cols = -clust, names_to = "estrato", values_to = "pourcentage")
+
+# Create interactive graph with ggiraph
+gg_strates <- ggplot(StratesLogt_long, 
+                     aes(x = as.factor(clust), 
+                         y = pourcentage, 
+                         fill = factor(estrato, levels = rev(unique(estrato))),
+                         tooltip = paste("Profile:", clust, 
+                                        "<br>Stratum:", estrato, 
+                                        "<br>Percentage:", round(pourcentage, 1), "%"),
+                         data_id = paste(clust, estrato, sep = "_"))) +
+  geom_bar_interactive(position = "fill", stat = "identity") +
+  theme_bw() +
+  scale_fill_brewer(palette = "YlOrRd", direction = -1) +
+  labs(fill = "Housing strata\n(%)", y = "%", x = "profile")
+
+# Display interactive graph with customized hover
+girafe(
+  ggobj = gg_strates,
+  options = list(opts_sizing(rescale = TRUE,  # Allows resizing
+                width = 1),      # Width relative to container
+    opts_hover(
+      css = "stroke:red; stroke-width:3px; filter: drop-shadow(0 0 5px rgba(0,0,0,0.3));"
+    ),
+    opts_tooltip(
+      css = "background-color:black; color:white; padding:5px; border-radius:5px; font-family:monospace;"
+    ),
+    opts_hover_inv(css = "opacity:0.7;")  # Other elements become slightly transparent
+  )
+)
+
+
+## Variables characterizing places of residence (table preparation)
+
+# Major residential zones
+GranZona <- dataclust %>%
+  group_by(clust, GranZona) %>%
+  summarise(effectifs = n(), .groups = 'drop') %>%
+  group_by(clust) %>%
+  mutate(effectifs = effectifs / sum(effectifs) * 100) %>%
+  pivot_wider(names_from = GranZona, values_from = effectifs)
+
+# replace NA by 0
+GranZona <- replace(GranZona, is.na(GranZona), 0)
+
+# To coerce df to long format
+GranZona_long <- GranZona %>%
+  pivot_longer(cols = -clust, names_to = "GranZona", values_to = "pourcentage")
+
+# Create interactive graph with ggiraph
+gg_granzona <- ggplot(GranZona_long, 
+                      aes(x = as.factor(clust), 
+                          y = pourcentage, 
+                          fill = factor(GranZona, levels = rev(unique(GranZona))),
+                          tooltip = paste("Profile:", clust, 
+                                         "<br>Zone:", GranZona, 
+                                         "<br>Percentage:", round(pourcentage, 1), "%"),
+                          data_id = paste(clust, GranZona, sep = "_"))) +
+  geom_bar_interactive(position = "fill", stat = "identity") +
+  theme_bw() +
+  scale_fill_brewer(palette = "Set3", direction = -1) +
+  labs(fill = "Residence locations\nby major zones\n(%)", y = "%", x = "profile")
+
+# Display interactive graph
+girafe(
+  ggobj = gg_granzona,
+  options = list(
+    opts_sizing(rescale = TRUE,  # Allows resizing
+                width = 1),      # Width relative to container
+    opts_hover(
+      css = "stroke:red; stroke-width:3px; filter: drop-shadow(0 0 5px rgba(0,0,0,0.3));"
+    ),
+    opts_tooltip(
+      css = "background-color:black; color:white; padding:5px; border-radius:5px; font-family:monospace;"
+    ),
+    opts_hover_inv(css = "opacity:0.7;")  # Other elements become slightly transparent
+  )
+)
+```
+
+### Creation of horizontal bar charts to visualize, for each profile, a second set of contextual variables 
+```{r horizontal bar charts to visualize for each profile a second set of contextual variables , message=FALSE, warning=FALSE, fig.height=10, fig.width=15}
+# Prepare the dataframe
+Contexte <- dataclust %>%
+  group_by(clust) %>%
+  summarise(
+    num = n(),
+    Nb_moy_voit = mean(NumAuto),
+    Taille_menage = mean(NumPersHog),
+    Pct_ICS12 = mean(Pct_ICS12),
+    ParModUtam = mean(ParModUtam)
+  ) %>%
+  as.data.frame()
+
+# Convert clust to factor for better display
+Contexte$clust <- as.factor(Contexte$clust)
+
+## Graph 1: Average number of cars per household
+gg_voitures <- ggplot(Contexte, 
+                      aes(x = Nb_moy_voit, 
+                          y = clust,
+                          tooltip = paste("Profile:", clust, 
+                                        "<br>Avg number of cars:", round(Nb_moy_voit, 2)),
+                          data_id = clust)) +
+  geom_col_interactive(fill = "purple", width = 0.7) +
+  theme_bw() +
+  labs(title = "Average number of cars\nper household",
+       x = "Average number",
+       y = "Profile") +
+  theme(plot.title = element_text(size = 10, hjust = 0.5),
+        axis.text.y = element_text(size = 9),
+        axis.title = element_text(size = 9))
+
+## Graph 2: Average household size
+gg_taille <- ggplot(Contexte, 
+                    aes(x = Taille_menage, 
+                        y = clust,
+                        tooltip = paste("Profile:", clust, 
+                                      "<br>Average size:", round(Taille_menage, 2)),
+                        data_id = clust)) +
+  geom_col_interactive(fill = "blue", width = 0.7) +
+  theme_bw() +
+  labs(title = "Average household size",
+       x = "Average size",
+       y = "") +  # Remove y label to avoid duplicates
+  theme(plot.title = element_text(size = 10, hjust = 0.5),
+        axis.text.y = element_blank(),  # Remove y labels
+        axis.ticks.y = element_blank(),
+        axis.title = element_text(size = 9))
+
+## Graph 3: Percentage of ICS1 and ICS2 households
+gg_ics <- ggplot(Contexte, 
+                 aes(x = Pct_ICS12, 
+                     y = clust,
+                     tooltip = paste("Profile:", clust, 
+                                   "<br>% ICS1 and ICS2:", round(Pct_ICS12, 1), "%"),
+                     data_id = clust)) +
+  geom_col_interactive(fill = "green", width = 0.7) +
+  theme_bw() +
+  labs(title = "% ICS1 and ICS2 households\nper residence zones",
+       x = "Percentage (%)",
+       y = "") +
+  theme(plot.title = element_text(size = 10, hjust = 0.5),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.title = element_text(size = 9))
+
+## Graph 4: Bike mode share
+gg_velo <- ggplot(Contexte, 
+                  aes(x = ParModUtam, 
+                      y = clust,
+                      tooltip = paste("Profile:", clust, 
+                                    "<br>Bike mode share:", round(ParModUtam, 1), "%"),
+                      data_id = clust)) +
+  geom_col_interactive(fill = "darkred", width = 0.7) +
+  theme_bw() +
+  labs(title = "Bike mode share\nper residence zones",
+       x = "Percentage (%)",
+       y = "") +
+  theme(plot.title = element_text(size = 10, hjust = 0.5),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.title = element_text(size = 9))
+
+# Combine the 4 graphs side by side with patchwork
+combined_plots1 <- (gg_voitures | gg_taille)+
+  plot_annotation(title = "Profile characteristics",
+                  theme = theme(plot.title = element_text(hjust = 0.5)))
+combined_plots2 <- (gg_ics | gg_velo)+
+  plot_annotation(title = "Profile characteristics",
+                  theme = theme(plot.title = element_text(hjust = 0.5)))
+
+# Display first two graphs
+girafe(
+  ggobj = combined_plots1,
+  options = list(
+    opts_sizing(rescale = TRUE, width = 1),  
+    opts_hover(css = "stroke:red; stroke-width:3px; filter: drop-shadow(0 0 5px rgba(0,0,0,0.3));"),
+    opts_tooltip(css = "background-color:black; color:white; padding:5px; border-radius:5px; font-family:monospace;"),
+    opts_hover_inv(css = "opacity:0.7;")
+  )
+)
+
+# Display last two graphs
+girafe(
+  ggobj = combined_plots2,
+  options = list(
+    opts_sizing(rescale = TRUE, width = 1),  # Full width for the 4 graphs
+    opts_hover(css = "stroke:red; stroke-width:3px; filter: drop-shadow(0 0 5px rgba(0,0,0,0.3));"),
+    opts_tooltip(css = "background-color:black; color:white; padding:5px; border-radius:5px; font-family:monospace;"),
+    opts_hover_inv(css = "opacity:0.7;")
+  )
+)
+
+```
+
+## Preparation of the final table containing the results for export to an external spreadsheet
+
+### Extraction of household identifiers
+```{r adding household id in the input table}
+# Useful later for retrieving the XY coordinates of the household's residence location
+Cyclistes <- Cyclistes |>
+  mutate(id_hog_pers = row.names(dataclust)) |>
+  separate(id_hog_pers, into = c("id_hog", "id_pers"), sep = "-", remove = FALSE)
+```
+
+### Retrieving the profile from the typology in the input table
+```{r adding cluster id in the input table}
+Cyclistes$profil <- dataclust$clust
+```
+
+### Exporting the table to MS Excel format
+```{r export}
+write.xlsx(Cyclistes, "TypoProfilCyclistesFINAL.xlsx")
+#browseURL("TypoProfilCyclistesFINAL.xlsx")
+```
+
+# Mapping the home and destination locations of cyclist profiles
+
+## Map of cyclist residence locations by profile
+
+### Data preparation for map creation
+#### Importing XY coordinates of the residence location of households containing at least one cyclist
+```{r Importing XY coordinates of the residence location}
+CoordXY_Menages <- read.xlsx("CoordXY_Menages.xlsx")
+```
+
+#### Joining XY coordinates of the residence location into the cyclists' table
+```{r joining XY coordinates of the residence location}
+Cyclistes <- merge(Cyclistes, CoordXY_Menages, by = "id_hog")
+```
+
+#### Importing the UTAM layer (Territorial Units for Mobility Analysis)
+```{r import UTAM}
+UTAM <- st_read("EMU2019_UTAM_Bgta.gpkg")
+```
+
+#### Creating a point pattern (sf object) from the XY coordinates of cyclists' residence locations
+```{r Creating a point pattern for residence locations}
+ResidCyclistes<- st_as_sf(Cyclistes, 
+                          coords = c("X_Hog","Y_Hog"), 
+                          crs = st_crs(UTAM)$srid)
+plot(st_geometry(ResidCyclistes), pch = ".", main = "Residence location of cyclists surveyed in the EMU-2019 (Bogotá)", cex.main = 0.7)
+```
+
+#### Sorting profiles
+```{r sorting profiles}
+# Necessary step to create smoothed density maps showing the concentration of cyclists' residence locations by profile
+## To create a list of cyclist profiles, in order
+Cyclistes$profil <- as.numeric(Cyclistes$profil)
+Cyclistes <- Cyclistes[order(Cyclistes$profil, decreasing = FALSE), ]
+ListProfils <- unique(Cyclistes$profil)
+```
+
+### Series of density maps showing the concentration of cyclists' residence locations by profile
+```{r home density maps, warning=FALSE, fig.height=13, fig.width=13}
+# Definition of the number of clusters
+nclass <- 6
+
+# Creation of a set of color palettes in a "list" object
+palettes <- list(
+    pal1 = hcl.colors(nclass, "YlOrRd", rev = TRUE),
+    pal2 = hcl.colors(nclass, "Greens 3", rev = TRUE),
+    pal3 = hcl.colors(nclass, "Reds 3", rev = TRUE),
+    pal4 = hcl.colors(nclass, "Grays", rev = TRUE),
+    pal5 = hcl.colors(nclass, "Oslo", rev = FALSE),
+    pal6 = hcl.colors(nclass, "Red-Purple", rev = TRUE),
+    pal7 = hcl.colors(nclass, "Inferno", rev = TRUE),
+    pal8 = hcl.colors(nclass, "Reds", rev = TRUE),
+    pal9 = hcl.colors(nclass, "Blues 3", rev = TRUE),
+    pal10 = hcl.colors(nclass, "Purples 3", rev = TRUE)
+)
+
+# To define the extent for smoothing, use the UTAM extent
+Emprise <- as.owin(st_buffer(UTAM, 1000))
+
+# Setting margins to insert the main title and titles for each map
+par(oma = c(3.5,0,3,0)+0.1, mar = c(0, 0.5, 1.2, 0.5))
+
+# To split the window into 2 rows and 3 columns (6 profiles)
+par(mfrow = c(2,3))
+
+# To define the smoothing radius (in m.)
+rayon <- 1000
+
+# To define the pixel size (in m.)
+resol <- 100 # here 100m x 100m = 1 ha.
+
+# Loop to produce and map a density surface by profile
+for (i in ListProfils){
+    
+    # Retrieve datasets by profile
+    fichier <- Cyclistes[which(Cyclistes$profil == i),]
+    
+    # To retrieve coordinates of residence locations
+    pts <- st_coordinates(st_as_sf(fichier, coords = c("X_Hog","Y_Hog"), crs = st_crs(UTAM)$srid))
+    
+    # To create a ppp object (spatstat format) and incorporate the extent
+    fichier.ppp <- ppp(pts[,1], pts[,2], window = Emprise)
+    
+    # To calculate the density surface (smoothing radius: 1000 m and spatial resolution of the image: 100m x 100m = 1 ha)
+    cartelissee <- density(fichier.ppp, sigma = rayon, kernel = "gaussian", eps = resol)
+    
+    # Convert the smoothed surface to SpatRaster format
+    cartelissee.raster <- rast(cartelissee)
+    crs(cartelissee.raster) <- st_crs(UTAM)$srid # To specify a CRS for the raster object
+    
+    # Convert densities to counts (multiply densities by the area of the circle)
+    values(cartelissee.raster) <- abs(values(cartelissee.raster) * pi * rayon **2)
+    
+    # Clip the raster to the UTAM extent
+    cartelissee.raster <- mask(cartelissee.raster, UTAM)
+    
+    # Bin breaks (equal intervals)
+    bks <- seq(from = min(values(cartelissee.raster), na.rm = TRUE), 
+               to = max(values(cartelissee.raster), na.rm = TRUE), 
+               by = (max(values(cartelissee.raster), na.rm = TRUE) - min(values(cartelissee.raster), na.rm = TRUE)) / nclass)
+    
+    # Plot the map
+    plot(st_geometry(UTAM), border = NA, bg = "grey60")
+    
+    mf_raster(x = cartelissee.raster,
+          var = "lyr.1",
+          type = "interval", 
+          breaks = bks,
+          pal = unlist(palettes[(i)]),
+          add = TRUE,
+          leg_pos = "bottomright",
+          leg_title = "Nb. of cyclist residence\nlocations within a\n1 km radius.\n", 
+          leg_title_cex = 0.5,
+          leg_val_cex = 0.45,
+          leg_size = 0.4,
+          leg_box_border = "white",
+          leg_box_cex = c(2.5, 2),
+          leg_adj = c(-2,1))
+    
+    title(main = paste("profile", i, sep = "-"))
+    
+    mtext(text = paste0("n = ", nrow(fichier), " cyclists"), 
+          side = 3, line = -2, adj = 0.1, cex = 0.7)
+    
+}
+
+mf_scale(
+    lwd = 1.5,
+    cex = 0.6,
+    pos = "bottomleft",
+    scale_units = "m"
+)
+
+mf_arrow(pos = "topright", adj = c(-3,-3))
+
+# To display the main title and source
+mtext("Residence locations of cyclists by profile in the Bogotá Metropolitan Area", cex = 1.3, side = 3, line = 1, adj = 0.5, outer = TRUE)
+mtext("   Sources: EMU2019 - SDM - Smoothing radius: 1000 m and resolution: 1 ha - Package: mapsf", side = 1, line = 1, adj = 0, cex = 0.6, outer = TRUE)
+```
+
+## Map of the destination locations of the first bicycle trip from home
+```{r import destination locations}
+Destination1erTrajet <- st_read("Centroides_ZAT_Destination_1er_Trajet_Depuis_Domicile.gpkg")
+```
+
+### Data preparation for map creation
+
+#### Creating a list of cyclists with at least one known destination
+```{r creating a list of cyclists with at least one known destination}
+listDestination1erTrajet <- as.character(Destination1erTrajet$id_concat)
+```
+
+#### Selecting cyclists with a known destination
+```{r Selecting cyclists with a known destination}
+Cyclistes <- Cyclistes[Cyclistes$id_hog_pers %in% listDestination1erTrajet, ]
+```
+
+#### Joining to retrieve the cyclist's profile at the destination location
+```{r join to get profiles at destination location}
+Destination1erTrajet <- merge(Destination1erTrajet, Cyclistes[c("profil", "id_hog_pers")], by.x = "id_concat", by.y = "id_hog_pers")
+```
+
+### Creation of the second series of destination location maps
+```{r destination density maps, warning=FALSE, fig.height=13, fig.width=13}
+# Setting margins to insert the main title and titles for each map
+par(oma = c(3.5,0,3,0)+0.1, mar = c(0, 0.5, 1.2, 0.5))
+
+# To split the window into 2 rows and 3 columns (6 profiles)
+par(mfrow = c(2,3))
+
+# Definition of the number of clusters
+nclass <- 6
+
+# To define the smoothing radius (in m.)
+rayon <- 1000
+  
+# To define the pixel size (in m.)
+resol <- 100 # here 100m x 100m = 1 ha.
+
+# Loop to produce and map a density surface by profile
+for (i in ListProfils){
+  
+  # Retrieve datasets by profile
+  fichier <- Destination1erTrajet[which(Destination1erTrajet$profil == i),]
+  
+  # To retrieve coordinates of destination locations
+  pts <- st_coordinates(fichier)
+  
+  # To create a ppp object (spatstat format) and incorporate the extent
+  fichier.ppp <- ppp(pts[,1], pts[,2], window = Emprise)
+  
+  # To calculate the density surface (smoothing radius: 1000 m and spatial resolution of the image: 100m x 100m = 1 ha)
+  cartelissee <- density(fichier.ppp, sigma = rayon, kernel = "gaussian", eps = resol)
+  
+  # Convert the smoothed surface to SpatRaster format
+  cartelissee.raster <- rast(cartelissee)
+  crs(cartelissee.raster) <- st_crs(UTAM)$srid # To specify a CRS for the raster object
+
+  # Convert densities to counts (multiply densities by the area of the circle)
+  values(cartelissee.raster) <- abs(values(cartelissee.raster) * pi * rayon **2)
+
+  # Clip the raster to the UTAM extent
+  cartelissee.raster <- mask(cartelissee.raster, UTAM)
+
+  # Bin breaks (equal intervals)
+  bks <- seq(from = min(values(cartelissee.raster), na.rm = TRUE), 
+			to = max(values(cartelissee.raster), na.rm = TRUE), 
+			by = (max(values(cartelissee.raster), na.rm = TRUE) - min(values(cartelissee.raster), na.rm = TRUE)) / nclass)
+
+    # Plot the map
+    plot(st_geometry(UTAM), border = NA, bg = "grey60")
+    
+    mf_raster(x = cartelissee.raster,
+          var = "lyr.1",
+          type = "interval", 
+          breaks = bks,
+          pal = unlist(palettes[(i)]),
+          add = TRUE,
+          leg_pos = "bottomright",
+          leg_title = "Nb. of destinations\nwithin a 1 km\nradius.\n", 
+          leg_title_cex = 0.5,
+          leg_val_cex = 0.45,
+          leg_size = 0.4,
+          leg_box_border = "white",
+          leg_box_cex = c(2.5, 2),
+          leg_adj = c(-2,1))
+    
+    title(main = paste("profile", i, sep = "-"))
+    
+    mtext(text = paste0("n = ", nrow(fichier), " cyclists"), 
+          side = 3, line = -2, adj = 0.1, cex = 0.7)
+    
+}
+
+mf_scale(
+    lwd = 1.5,
+    cex = 0.6,
+    pos = "bottomleft",
+    scale_units = "m"
+)
+
+mf_arrow(pos = "topright", adj = c(-3,-3))
+
+# To display the main title and source
+mtext("Destination of first bicycle trips from home in Bogotá", cex = 1.3, side = 3, line = 1, adj = 0.5, outer = TRUE)
+mtext("   Sources: EMU2019 - SDM - Smoothing radius: 1000 m and resolution: 1 ha - Package: mapsf", side = 1, line = 1, adj = 0, cex = 0.6, outer = TRUE)
+
+```
