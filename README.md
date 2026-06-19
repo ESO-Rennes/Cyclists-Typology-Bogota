@@ -54,7 +54,7 @@ of people using other travel modes.<o:p></o:p></span></p>
 <p class=MsoNormal style='margin-bottom:12.0pt;line-height:normal;background:
 white'><span lang=EN-GB style='font-size:12.0pt;font-family:"Segoe UI",sans-serif;
 mso-fareast-font-family:"Times New Roman";color:#1F2328;mso-ansi-language:EN-GB;
-mso-fareast-language:FR'>This study is part of a PhD thesis developed by&nbsp;<a
+mso-fareast-language:FR'>This study was part of a PhD thesis developed by&nbsp;<a
 href="https://hal.science/tel-04933444"><span class=SpellE>Maëlle</span>
 Lucas</a>&nbsp;and also part of the activities of the&nbsp;</span><span
 class=SpellE><span style='font-size:12.0pt;font-family:"Segoe UI",sans-serif;
@@ -157,7 +157,7 @@ modes déplacement.<o:p></o:p></span></p>
 <p class=MsoNormal style='margin-bottom:12.0pt;line-height:normal;background:
 white'><span style='font-size:12.0pt;font-family:"Segoe UI",sans-serif;
 mso-fareast-font-family:"Times New Roman";color:#1F2328;mso-ansi-language:FR;
-mso-fareast-language:FR'>Cette étude fait partie d'une thèse de doctorat
+mso-fareast-language:FR'>Cette étude a été développée dans le cadre d'une thèse de doctorat
 menée par&nbsp;</span><span lang=EN-GB style='font-size:12.0pt;font-family:
 "Segoe UI",sans-serif;mso-fareast-font-family:"Times New Roman";color:#1F2328;
 mso-ansi-language:EN-GB;mso-fareast-language:FR'><a
