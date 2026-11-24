@@ -1,0 +1,78 @@
+/* Style général du corps du document */
+body {
+    font-family: "Linux Libertine Display G", Linux Libertine Display G; /* Police de caractères */
+    font-size: 12pt; /* Taille de la police */
+    line-height: 1.5; /* Interligne */
+    margin: 1in; /* Marges de 1 pouce */
+}
+
+/* Styles pour les titres */
+h1 {
+    font-size: 24pt; /* Taille pour le titre de niveau 1 */
+    font-weight: bold;
+    margin-top: 20pt;
+    margin-bottom: 10pt;
+}
+
+h2 {
+    font-size: 20pt; /* Taille pour le titre de niveau 2 */
+    margin-top: 18pt;
+    margin-bottom: 8pt;
+}
+
+h3 {
+    font-size: 16pt; /* Taille pour le titre de niveau 3 */
+    margin-top: 16pt;
+    margin-bottom: 6pt;
+}
+
+h4 {
+    font-size: 14pt; /* Taille pour le titre de niveau 3 */
+    margin-top: 14pt;
+    margin-bottom: 6pt;
+	font-style: italic; /* Met le texte en italique */
+}
+
+
+
+/* Style pour les paragraphes */
+p {
+    margin: 0; /* Pas de marge par défaut */
+    margin-bottom: 12pt; /* Espace entre les paragraphes */
+}
+
+/* Style pour les listes */
+ul, ol {
+    margin-left: 20pt; /* Indentation des listes */
+    margin-bottom: 12pt; /* Espace entre les listes et le texte suivant */
+}
+
+/* Style pour les tableaux */
+table {
+    border-collapse: collapse; /* Fusionner les bordures des cellules */
+    width: 100%; /* Largeur du tableau */
+    margin-bottom: 12pt; /* Espace en dessous des tableaux */
+}
+
+th, td {
+    border: 1px solid black; /* Bordure des cellules */
+    padding: 4pt; /* Espace intérieur des cellules */
+    text-align: left; /* Alignement du texte */
+}
+
+/* Style pour les images */
+img {
+    max-width: 100%; /* Limiter la largeur des images */
+    height: auto; /* Garder le rapport d'aspect */
+    margin-bottom: 12pt; /* Espace en dessous des images */
+}
+
+/* Lien */
+a {
+    color: blue; /* Couleur des liens */
+    text-decoration: underline; /* Souligner les liens */
+}
+
+a:hover {
+    color: darkblue; /* Couleur au survol */
+}
