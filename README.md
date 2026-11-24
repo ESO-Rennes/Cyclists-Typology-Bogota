@@ -45,7 +45,11 @@ style='font-size:12.0pt;font-family:"Segoe UI",sans-serif;mso-fareast-font-famil
 "Times New Roman";color:#1F2328;mso-ansi-language:EN-GB;mso-fareast-language:
 FR'> (VPN required for access out of Colombia). The method relies on Factorial Analysis of Mixed Data and Hierarchical
 Agglomerative Clustering. The analysis combines sociodemographic
+<<<<<<< HEAD
 characteristics of 3,241 individuals and variables describing their mobility
+=======
+characteristics of 3,241 individuals and variables describing their mobility TEST
+>>>>>>> b83191362ccc2d1ff789286062eb0f65679687d4
 practices. Maps showing the concentration of the places of residence and the
 concentration of places of destination of the six bike users’ profiles are provided.
 The method developed in R is replicable to other urban areas and other groups
