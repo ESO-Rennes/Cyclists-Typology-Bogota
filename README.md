@@ -17,7 +17,7 @@ This study was part of a PhD thesis developed by [Maëlle Lucas](https://hal.sci
 
 \
 
------ VERSION FRANCAISE -----\
+----- VERSION FRANCAISE ----- \
 *Ce travail a été réalisé par [Maëlle Lucas](https://pagespro.univ-gustave-eiffel.fr/maelle-lucas) et [Florent Demoraes](https://perso.univ-rennes2.fr/florent.demoraes) au sein de l'unité de recherche CNRS ESO à Rennes (France), en mars 2021 et mis à jour en juin 2026.*
 
 **Construction d'une typologie de cyclistes à partir d'une enquête ménages déplacements et cartographie des profils obtenus**
