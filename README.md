@@ -13,7 +13,8 @@ This study was part of a PhD thesis developed by [Maëlle Lucas](https://hal.sci
 
 --\> Access to the [**R markdown script**](https://github.com/ESO-Rennes/Cyclists-Typology-Bogota/blob/main/ScriptTypoCyclistesAFDM_v10_ENG.Rmd)\
 --\> Access to the [**HTML laid-out output**](https://rpubs.com/Bac_A_Sable/cyclist_profiles_Bogota_2019_ENG)\
---\> Access to the [**the data processed in the script**](https://github.com/ESO-Rennes/Cyclists-Typology-Bogota/raw/main/data.zip)
+--\> Access to the [**the data processed in the script**](https://github.com/ESO-Rennes/Cyclists-Typology-Bogota/raw/main/data.zip) \
+\
 
 ----- VERSION FRANCAISE -----\
 *Ce travail a été réalisé par [Maëlle Lucas](https://pagespro.univ-gustave-eiffel.fr/maelle-lucas) et [Florent Demoraes](https://perso.univ-rennes2.fr/florent.demoraes) au sein de l'unité de recherche CNRS ESO à Rennes (France), en mars 2021 et mis à jour en juin 2026.*
