@@ -13,7 +13,9 @@ This study was part of a PhD thesis developed by [Maëlle Lucas](https://hal.sci
 
 --\> Access to the [**R markdown script**](https://github.com/ESO-Rennes/Cyclists-Typology-Bogota/blob/main/ScriptTypoCyclistesAFDM_v10_ENG.Rmd)\
 --\> Access to the [**HTML laid-out output**](https://rpubs.com/Bac_A_Sable/cyclist_profiles_Bogota_2019_ENG)\
---\> Access to the [**the data processed in the script**](https://github.com/ESO-Rennes/Cyclists-Typology-Bogota/raw/main/data.zip) \
+--\> Access to the [**the data processed in the script**](https://github.com/ESO-Rennes/Cyclists-Typology-Bogota/raw/main/data.zip)
+
+\
 \
 
 ----- VERSION FRANCAISE -----\
